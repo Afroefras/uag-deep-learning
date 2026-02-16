@@ -1,0 +1,47 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+bin/
+lib/
+share/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.ipynb_checkpoints
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Data & Models (STRICT: No data committed)
+data/
+datasets/
+*.csv
+*.xlsx
+*.parquet
+*.json
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.tiff
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
