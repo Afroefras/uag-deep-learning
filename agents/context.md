@@ -1,22 +1,26 @@
-# Context for AI Agents: PyTorch Lightning Deep Learning Notebooks
+# Context for AI Agents: Deep Learning & Production Notebooks (Parcial 3)
 
-This repository contains Jupyter Notebooks used for teaching Deep Learning to last-semester undergraduate students. When creating new notebooks or modifying existing ones, future AI agents **must** strictly adhere to the following pedagogical and styling guidelines:
+This repository contains Jupyter Notebooks used for teaching Deep Learning to last-semester undergraduate students (actuaries/data scientists). When creating new notebooks or modifying existing ones, future AI agents **must** strictly adhere to the following pedagogical and styling guidelines:
 
-## 1. Content and Framework
-- **Core Framework**: All models should be implemented using **PyTorch Lightning** (`pytorch_lightning as pl`). Avoid raw PyTorch training loops (use `pl.LightningModule` and `pl.Trainer`).
-- **Target Audience**: Last-semester Deep Learning students. The content should be advanced but pedagogically structured. Explain the *why* behind architectural choices rather than the absolute basics of programming. 
-- **Language**: Use Spanish, as it is the language of instruction for the professor.
+## 1. Content and Frameworks (Training vs. Inference)
+- **Training**: When building or fine-tuning models from scratch (e.g., CNNs, ResNet, EfficientNet, simple Transformers), strictly use **PyTorch Lightning** (`pytorch_lightning as pl`). Avoid raw PyTorch training loops.
+- **Inference & State-of-the-Art**: When teaching inference with modern tools (YOLO, SAM, Hugging Face, LLMs), **DO NOT** wrap them in PyTorch Lightning. Use their native APIs and pipelines (e.g., `ultralytics` for YOLO, `transformers` pipelines for HF, `llama-cpp-python` for local LLMs).
+- **Target Audience**: Last-semester students with strong mathematical backgrounds but transitioning into production/engineering. Explain the *why* behind architectural choices. Use Spanish.
 
 ## 2. Notebook Structure & Styling
-- **Minimal, High-Impact Markdown**: Keep Markdown cells extremely concise. Do not include too much markdown text unless it is highly relevant (e.g. highlighting a crucial concept, clarifying an architectural decision, or separating major sections). Avoid walls of text.
-- **Granular Code Cells**: Separate code cells logically to show the step-by-step process of implementing the solution (e.g., data loading, data visualization, model definition, training, evaluation). Do not put everything into one massive cell. This helps students digest the material progressively.
+- **Minimal, High-Impact Markdown**: Keep Markdown cells extremely concise. Highlight crucial concepts, but avoid walls of text. 
+- **Granular Code Cells**: Separate code logically (data loading -> visualization -> model loading -> inference -> evaluation). Do not put everything into one massive cell.
 
 ## 3. Visualizations
-- **Show, Don't Just Tell**: Always include visual proof of the data, the process, and the model's performance. Focus heavily on visualizations.
-- **Data Exploration**: Print shapes and visualize a batch of the data before building the model (e.g., using `matplotlib.pyplot` to show images, audio waves, text samples, etc.).
-- **Evaluation**: Visualize predictions (e.g., side-by-side true vs. predicted labels) and always include robust evaluation metrics. Use tools like `sklearn.metrics.confusion_matrix` and `classification_report` to show results.
+- **Show, Don't Just Tell**: Always include visual proof. 
+- **Computer Vision**: Always plot original images vs. bounding boxes/masks using `plotly`.
+- **NLP/LLMs**: Clearly print the prompt going *into* the model and the raw text coming *out*, formatting it nicely.
 
 ## 4. Code Quality
-- **Self-Contained Executions**: Always start with necessary installation commands (e.g., `%pip install lightning` if needed for Colab compatibility) and imports.
-- **Reproducibility**: Set seeds using `pl.seed_everything(42)` (or similar) at the beginning of the notebook so students can replicate results.
-- **Comments**: Keep in-code comments concise but descriptive. They should explain the logic flow (e.g. the transformations or dimensions of tensors passing through PyTorch layers).
+- **Reproducibility**: Set seeds (`pl.seed_everything(42)` or `random.seed`).
+- **Comments**: Keep in-code comments concise but descriptive, especially noting tensor shapes or token limits.
+
+## 5. Parcial 3 Specifics (Hardware & Resource Constraints)
+- **Local LLMs**: Always default to lightweight, quantized models (e.g., GGUF format, Q4_K_M quantization) suitable for CPU/limited RAM.
+- **RAG Limits**: Keep context retrieval extremely small (Top 1 or 2 chunks maximum) to prevent overloading local context windows. Use simple tools (`numpy` dot product, `SentenceTransformers`) over heavy databases unless otherwise specified.
+- **Heavy Vision Models**: Prioritize lighter versions like `YOLOv8n` (nano) or `FastSAM` / `MobileSAM` to ensure real-time inference viability on student machines.
