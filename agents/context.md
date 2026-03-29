@@ -24,3 +24,9 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
 - **Local LLMs**: Always default to lightweight, quantized models (e.g., GGUF format, Q4_K_M quantization) suitable for CPU/limited RAM.
 - **RAG Limits**: Keep context retrieval extremely small (Top 1 or 2 chunks maximum) to prevent overloading local context windows. Use simple tools (`numpy` dot product, `SentenceTransformers`) over heavy databases unless otherwise specified.
 - **Heavy Vision Models**: Prioritize lighter versions like `YOLOv8n` (nano) or `FastSAM` / `MobileSAM` to ensure real-time inference viability on student machines.
+
+## 6. Modularización y Estructura (Parcial 3)
+- **Archivos Separados**: Para mantener las libretas limpias ("sin montañas de código"), la lógica pesada (limpieza, ingeniería de datos, PyTorch Lightning Modules, funciones de Plotly) **debe** aislarse en scripts de ayuda especializados (ej. `data.py`, `models.py`, `viz.py`). No sobrecargar un solo `helpers.py`.
+- **El rol de la Libreta**: El Jupyter Notebook actúa como punto de consumo/explicación. Importa los helpers y construye el paso a paso ("Show, Don't Tell"). El nombre del notebook **NO** debe llevar prefijo numérico, usa el formato: `<Dataset> - <Tema>.ipynb`.
+- **Directorios**: Todo el Parcial 3 vive en `parcial_3/`. Las subcarpetas se nombran por el *Tema* (ej. `transfer_learning/`), sin prefijos de semana para prever desfasamientos. No hay que cruzar dependencias entre temas.
+- **Modelos CNN Recomendados**: Usar `resnet50` o `resnet101` (balance), `efficientnet_v2_s` (convergencia rápida), o `mobilenet_v3_large` (móvil). **Crítico:** usar siempre `weights='DEFAULT'` (no `pretrained=True`) para obtener la mejor versión (`IMAGENET1K_V2`).
