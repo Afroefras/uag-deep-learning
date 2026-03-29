@@ -45,3 +45,4 @@ datasets/
 .idea/
 *.swp
 *.swo
+/parcial_3/transfer_learning/lightning_logs
