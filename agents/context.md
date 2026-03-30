@@ -9,11 +9,13 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
 
 ## 2. Notebook Structure & Styling
 - **Minimal, High-Impact Markdown**: Keep Markdown cells extremely concise. Highlight crucial concepts, but avoid walls of text. 
+- **Pedagogical Narrative (Problem -> Solution)**: Before applying a solution (like Fine-Tuning), let students empirically see the *problem* (e.g., showing a random confusion matrix of an untrained head) so they understand the "why".
 - **Granular Code Cells**: Separate code logically (data loading -> visualization -> model loading -> inference -> evaluation). Do not put everything into one massive cell.
 
 ## 3. Visualizations
 - **Show, Don't Just Tell**: Always include visual proof. 
-- **Computer Vision**: Always plot original images vs. bounding boxes/masks using `plotly`.
+- **Premium Aesthetics**: Use `plotly` (with `template='plotly_dark'` or similar premium themes) for interactive, high-impact plots like 3D PCA embeddings or Confusion Matrices. Use `matplotlib` primarily for pure image subplots to avoid overloading the browser.
+- **Computer Vision**: Always plot original images vs. bounding boxes/masks.
 - **NLP/LLMs**: Clearly print the prompt going *into* the model and the raw text coming *out*, formatting it nicely.
 
 ## 4. Code Quality
@@ -21,6 +23,7 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
 - **Comments**: Keep in-code comments concise but descriptive, especially noting tensor shapes or token limits.
 
 ## 5. Parcial 3 Specifics (Hardware & Resource Constraints)
+- **Dataloaders & Windows**: When creating PyTorch `DataLoader`s, default to `num_workers=0` to prevent crashes/freezes on students' Windows machines. Use `pin_memory=True` and `persistent_workers=True` (when applicable) to optimize data loading.
 - **Local LLMs**: Always default to lightweight, quantized models (e.g., GGUF format, Q4_K_M quantization) suitable for CPU/limited RAM.
 - **RAG Limits**: Keep context retrieval extremely small (Top 1 or 2 chunks maximum) to prevent overloading local context windows. Use simple tools (`numpy` dot product, `SentenceTransformers`) over heavy databases unless otherwise specified.
 - **Heavy Vision Models**: Prioritize lighter versions like `YOLOv8n` (nano) or `FastSAM` / `MobileSAM` to ensure real-time inference viability on student machines.
