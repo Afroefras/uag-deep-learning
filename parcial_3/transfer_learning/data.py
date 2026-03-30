@@ -44,3 +44,23 @@ def inverse_normalize(tensor):
     tensor = inv_normalize(tensor)
     return torch.clamp(tensor, 0, 1)
 
+
+def get_predictions(model, dataloader, device="cuda" if torch.cuda.is_available() else "cpu"):
+    """Función de ayuda para correr toda validación sin entrenar"""
+    model.eval()
+    model.to(device)
+    
+    all_preds = []
+    all_labels = []
+    
+    with torch.no_grad():
+        for x, y in dataloader:
+            x = x.to(device)
+            # Predicción cruda
+            logits = model(x)
+            preds = torch.argmax(logits, dim=1)
+            
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(y.numpy())
+            
+    return np.array(all_preds), np.array(all_labels)
