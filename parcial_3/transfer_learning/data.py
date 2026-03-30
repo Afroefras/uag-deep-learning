@@ -1,4 +1,5 @@
-import os
+import numpy as np
+
 import torch
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, random_split
@@ -28,9 +29,9 @@ def get_pet_data(data_dir='./data', batch_size=32, num_workers=0):
 
     # Dataloaders - Usando num_workers=0 por default para evitar cuellos de botella en clases con Windows
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, 
-                              num_workers=num_workers, pin_memory=True)
+                              num_workers=num_workers, pin_memory=True, persistent_workers=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, 
-                            num_workers=num_workers, pin_memory=True)
+                            num_workers=num_workers, pin_memory=True, persistent_workers=True)
 
     class_names = full_dataset.classes
     return train_loader, val_loader, class_names
