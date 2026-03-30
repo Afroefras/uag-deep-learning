@@ -73,3 +73,28 @@ def plot_pca_features(features: np.ndarray, labels: np.ndarray, class_names: Lis
                          
     fig.update_layout(template='plotly_dark')  # Diseño premium para impacto visual
     fig.show()
+
+def plot_confusion_matrix(preds: np.ndarray, labels: np.ndarray, class_names: List[str], title: str = "Matriz de Confusión"):
+    """
+    Despliega una matriz de confusión altamente estética para impresionar a los alumnos,
+    usando Plotly. Ideal para comprobar si el modelo está clasificando de forma aleatoria vs aprendida.
+    """
+    from sklearn.metrics import confusion_matrix
+    
+    cm = confusion_matrix(labels, preds)
+    
+    # Asegurarnos de que entren todas las etiquetas (a veces son muchas)
+    fig = px.imshow(cm,
+                    labels=dict(x="Predicción", y="Real", color="Frecuencia"),
+                    x=class_names,
+                    y=class_names,
+                    title=title,
+                    color_continuous_scale="Viridis", # Colores premium
+                    aspect="auto")
+                    
+    fig.update_layout(template='plotly_dark',
+                      xaxis_tickangle=-45,
+                      width=900,
+                      height=900,
+                      margin=dict(l=50, r=50, t=80, b=150))
+    fig.show()
