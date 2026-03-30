@@ -1,43 +1,57 @@
-# Deep Learning: Unstructured Data (Term 02)
+# UAG Deep Learning: De la Teoría a Producción (Parcial 3)
 
-Welcome to Term 02 of the Deep Learning course at UAG. This term focuses on handling non-tabular data, primarily **Images** and **Audio**.
+Este repositorio contiene el material y las libretas Jupyter para la clase de **Deep Learning** de últimos semestres (Actuaría / Ciencia de Datos) en la Universidad Autónoma de Guadalajara (UAG). 
 
-## Course Structure
-- **Images**: Understanding tensors, grayscale vs. RGB, normalization, and augmentations.
-- **Audio**: Signal processing, sampling rates, and transformation to spectrograms (future topics).
+El objetivo principal de esta etapa (Parcial 3) es la transición de conceptos puramente académicos hacia entornos y despliegues orientados a la producción y la ingeniería de IA.
 
-## Setup Instructions
+## 🚀 Temario y Enfoque
 
-### 1. Environment Setup
-We recommend using a Python virtual environment to manage dependencies.
+- **Entrenamiento Optimizado**: Uso estricto de **PyTorch Lightning** (`pl.LightningModule`) para abstraer ciclos de entrenamiento, crear código limpio y escalable (e.g., Transfer Learning con arquitecturas CNN modernas).
+- **Inferencia State-of-the-Art (SOTA)**: Consumo de APIs nativas y modelos avanzados de Visión por Computadora (**YOLOv8**, **SAM / FastSAM**) y NLP/LLMs (**Hugging Face**, **llama-cpp-python**).
+- **Módulos Locales y Escalables**: Trabajo con modelos ligeros (GGUF, Q4_K_M) y bases vectoriales simples para RAG, garantizando que el diseño pueda correr eficientemente en las computadoras portátiles de los estudiantes y luego escale hacia la nube.
+- **Narrativa "Show, Don't Tell"**: Énfasis en la visualización interactiva de resultados tangibles utilizando `plotly`.
+
+## 🛠 Entorno de Desarrollo
+
+Se **DEBE** usar un entorno virtual para manejar las dependencias del proyecto de forma aislada (Regla de la clase).
 
 ```powershell
-# Create venv
-python -m venv venv
+# 1. Crear el entorno virtual
+python -m venv .venv
 
-# Activate venv
-.\venv\Scripts\activate
+# 2. Activar el entorno
+.\.venv\Scripts\activate
 
-# Install requirements
+# 3. Instalar los requerimientos
 pip install -r requirements.txt
 ```
 
-> [!IMPORTANT]
-> If you accidentally tracked your `venv` or large data files before adding the `.gitignore`, run:
-> `git rm -r --cached .`
-> Then add and commit again.
+## 🌳 Flujo de Trabajo (Git Workflow)
 
-### 2. Git Workflow
-The repository follows a specific branching strategy. Avoid working on the `main` branch.
+El repositorio está diseñado para evolucionar progresivamente a lo largo del periodo.
 
-- **Base Branch**: `2026-01`
-- **Instructor Branch**: `profe`
-- **Topic Branches**: `topic/image-wrangling`, etc.
+- **Rama Principal (Default)**: `2026-01`
+- **Ramas por Tema**: El profesor creará una rama específica para preparar cada tema nuevo. Una vez lista (y antes de la clase), se fusionará ("merge") en la rama `2026-01`.
 
-**Recommended Student Workflow**:
-1. Pull changes from the current term branch: `git pull origin 2026-01`.
-2. Create your own branch: `git checkout -b student/your-name`.
-3. Work on your notebook and commit your code (remember: no data files!).
+### 👨‍🎓 Instrucciones para Alumnos
+Para estar siempre al día con la clase tienes dos opciones:
 
-## Data Policy
-**Do not commit data files.** The `.gitignore` is configured to ignore common image, audio, and structured data formats. Students should download datasets locally as directed in the notebooks.
+**Opción A (Recomendada si no modificas mucho el repo)**:
+Simplemente sitúate en la rama principal y actualiza antes de cada clase:
+```powershell
+git checkout 2026-01
+git pull origin 2026-01
+```
+
+**Opción B (Recomendada si haces tus propios experimentos y notas)**:
+Crea tu propia rama de estudio personal y actualízala mezclando los cambios del profesor conforme sube nuevos temas:
+```powershell
+# Al inicio del semestre, crea tu rama:
+git checkout -b alumno/mi-nombre
+
+# Cuando el profesor avise que subió un tema nuevo a la rama default:
+git pull origin 2026-01
+```
+
+> [!CAUTION]
+> **Política de Datos:** NO subas ("commit") archivos pesados (pesos `.pt`, bases de datos, copias masivas de imágenes directas en carpetas root) a GitHub. Usa las funciones de descarga incluidas y descarga localmente lo que necesiten tus libretas. **ASEGURATE DE AGREGAR EN EL .gitignore LOS ARCHIVOS QUE NO DEBEN SER SUBIDOS**
