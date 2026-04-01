@@ -46,3 +46,6 @@ datasets/
 *.swp
 *.swo
 /parcial_3/transfer_learning/lightning_logs
+
+# YOLO
+/parcial_3/yolo/local
