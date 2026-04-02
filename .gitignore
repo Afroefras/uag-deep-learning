@@ -49,3 +49,6 @@ datasets/
 
 # YOLO
 /parcial_3/yolo/local
+
+# Secretos
+.env
