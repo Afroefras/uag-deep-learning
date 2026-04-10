@@ -28,7 +28,7 @@ source venv/bin/activate
 ## Paso 2: Instalar dependencias del módulo RAG
 
 ```powershell
-pip install "huggingface_hub>=1.0" transformers accelerate google-genai python-dotenv python-telegram-bot sentence-transformers ollama
+pip install "huggingface_hub>=1.0" transformers accelerate google-genai python-dotenv python-telegram-bot sentence-transformers ollama pypdf scikit-learn bertviz
 ```
 
 > **Nota**: Es importante instalar `huggingface_hub>=1.0` explícitamente. Versiones anteriores (como la `0.1.2`) no incluyen el CLI de autenticación ni muchos comandos modernos.
