@@ -7,9 +7,16 @@ Funciones:
     - plot_attention_heatmap: Mapa de calor de pesos de atención (Plotly).
 """
 
+import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-import numpy as np
+
+try:
+    from sklearn.decomposition import PCA
+except ImportError as e:
+    raise ImportError(
+        "scikit-learn no está instalado. Instálalo con: pip install scikit-learn"
+    ) from e
 
 
 # ── Paleta de colores para tokens ──────────────────────────────────────────────
@@ -155,8 +162,6 @@ def plot_embeddings_3d(
         fig = plot_embeddings_3d(emb_array, ["Texto 1", "Texto 2", ...])
         fig.show()
     """
-    from sklearn.decomposition import PCA
-
     pca = PCA(n_components=3, random_state=42)
     coords = pca.fit_transform(embeddings)
 
