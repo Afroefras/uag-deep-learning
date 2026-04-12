@@ -1,6 +1,18 @@
 # Setup Guide: Módulo RAG — `parcial_3/rag/`
 
-Antes de ejecutar cualquier notebook de este módulo, sigue estos pasos en orden. Puedes hacerlo tú mismo (preferible para aprender) — solo necesitas seguir los comandos de terminal.
+## Índice
+
+- [Prerequisitos del Sistema](#prerequisitos-del-sistema)
+- [Paso 1: Activar el entorno virtual](#paso-1-activar-el-entorno-virtual)
+- [Paso 2: Instalar dependencias](#paso-2-instalar-dependencias)
+- [Paso 3: Instalar Ollama (Motor LLM)](#paso-3-instalar-ollama-motor-llm)
+- [Paso 4: Descargar y Probar Gemma 4 (LLM Local)](#paso-4-descargar-y-probar-gemma-4-llm-local)
+- [Paso 5: Configurar Gemini API (Embeddings)](#paso-5-configurar-gemini-api-embeddings)
+- [Paso 6: Autenticarse en Hugging Face (Tokenizer)](#paso-6-autenticarse-en-hugging-face-tokenizer)
+
+---
+
+Antes de ejecutar cualquier notebook de este módulo, sigue estos pasos en orden para asegurar que tu entorno esté listo.
 
 ---
 
@@ -12,6 +24,8 @@ Antes de ejecutar cualquier notebook de este módulo, sigue estos pasos en orden
 ---
 
 ## Paso 1: Activar el entorno virtual
+
+Es fundamental trabajar dentro del entorno virtual para que las librerías no choquen con otras clases.
 
 **Windows (PowerShell):**
 ```powershell
@@ -25,179 +39,130 @@ source venv/bin/activate
 
 ---
 
-## Paso 2: Instalar dependencias del módulo RAG
+## Paso 2: Instalar dependencias
+
+Instalaremos todas las librerías necesarias para procesamiento de texto, modelos de Google y herramientas locales.
 
 ```powershell
 pip install "huggingface_hub>=1.0" transformers accelerate google-genai python-dotenv python-telegram-bot sentence-transformers ollama pypdf scikit-learn bertviz
 ```
 
-> **Nota**: Es importante instalar `huggingface_hub>=1.0` explícitamente. Versiones anteriores (como la `0.1.2`) no incluyen el CLI de autenticación ni muchos comandos modernos.
-
-> **Nota sobre `sentence-transformers`**: Es una alternativa completamente gratuita y offline a Gemini Embeddings. No requiere API key — solo internet para descargar el modelo la primera vez (~90MB). Ideal si no tienes internet o quieres evitar el API key. Su uso es: `from sentence_transformers import SentenceTransformer; model = SentenceTransformer("all-MiniLM-L6-v2")`.
+> **Nota**: Es importante instalar `huggingface_hub>=1.0` explícitamente para evitar problemas con comandos de autenticación modernos.
 
 ---
 
-## Paso 2.5: Autenticarse en Hugging Face (para Gemma 2 Tokenizer)
+## Paso 3: Instalar Ollama (Motor LLM)
 
-Este paso es necesario si quieres usar el Tokenizer oficial de Google directamente con `transformers`. No es necesario para Ollama ni para Gemini Embeddings.
-
-### A. Aceptar los términos de Gemma en la web
-1. Abre tu navegador e inicia sesión en huggingface.co con tu cuenta.
-2. Ve directamente a: **[huggingface.co/google/gemma-2-2b](https://huggingface.co/google/gemma-2-2b)**
-3. Verás un formulario de acceso ("Gated model"). Completa los datos y haz clic en **"Accept"**.
-4. La aprobación es prácticamente instantánea.
-
-> ⚠️ El login desde la terminal **no es suficiente**. Primero hay que aceptar los términos en la web. Solo se hace una vez por cuenta.
-
-### B. Autenticarse desde la terminal
-
-El CLI anterior (`huggingface-cli`) está deprecado. El nuevo es `hf`:
-
-```powershell
-hf auth login
-```
-
-Te pedirá un token. Créalo en: **Hugging Face → Settings → Access Tokens → New token (Read)**.
-
-**Verificar que el login fue exitoso:**
-```powershell
-hf auth whoami
-```
-
----
-
-## Paso 3: Instalar Ollama (motor de LLMs locales)
-
-Ollama gestiona CUDA/Metal automáticamente, sin compilación ni dependencias de Visual Studio.
+Ollama es la herramienta que nos permite correr modelos de lenguaje potentes en nuestra propia computadora.
 
 ### 🪟 Windows
 1. Descarga el instalador desde **[ollama.com/download](https://ollama.com/download)**
-2. Ejecuta el `.exe` e instala (un clic)
-3. Ollama queda corriendo como servicio en segundo plano automáticamente
+2. Ejecuta el `.exe` e instala.
+3. Ollama queda corriendo como servicio en el "tray" (junto al reloj) automáticamente.
 
-### 🍎 Mac (Apple Silicon y Intel)
-1. Descarga desde **[ollama.com/download](https://ollama.com/download)** → opción Mac
-2. Arrastra `Ollama.app` a tu carpeta de Aplicaciones y ábrela
+### 🍎 Mac
+1. Descarga desde **[ollama.com/download](https://ollama.com/download)** → opción Mac.
+2. Arrastra `Ollama.app` a Aplicaciones y ábrela.
 
-> **Verificar instalación:** Abre una terminal nueva y corre:
-> ```powershell
-> ollama --version
-> ```
+### ✅ Comprobación rápida
+Abre una terminal **nueva** y corre:
+```powershell
+ollama --version
+```
+> Deberías ver la versión instalada (ej. `ollama v0.1.x`).
 
 ---
 
-## Paso 4: Descargar los modelos Gemma 4
+## Paso 4: Descargar y Probar Gemma 4 (LLM Local)
 
+¡Esta es la parte más emocionante! Vamos a bajar el cerebro del modelo **Gemma 4**, que es nativamente multimodal (entiende imágenes y texto).
 
-> [!IMPORTANT]
-> **Todos los modelos de Gemma 4 son nativamente multimodales** (texto + imagen). No se necesita archivo `mmproj` separado — Ollama lo maneja internamente. Es una de las ventajas clave frente a `llama-cpp-python`.
+### A. Descargar el modelo
+Elige el tamaño según tu computadora:
 
-### Para el Profesor (RTX 3070, ~8GB VRAM)
+- **GPU potente (RTX 3060+, ~8GB VRAM):**
+  ```powershell
+  ollama pull gemma4:e4b
+  ```
+- **Computadora estándar (Laptop / Mac Air):**
+  ```powershell
+  ollama pull gemma4:e2b
+  ```
 
-```powershell
-# Gemma 4 E4B — 9.6 GB, 128K contexto, Text + Image
-ollama pull gemma4:e4b
-```
+### ✅ Comprobación con Python
+Crea un archivo temporal `test_ollama.py` o corre esto en un notebook:
 
-> ⚠️ **Nota de VRAM**: Con 8GB de VRAM puede ir justo. Si tienes problemas, usa `gemma4:e2b` que funciona igual pedagógicamente y pesa 7.2 GB.
-
-### Para Estudiantes (laptops con GPU o Colab)
-
-```bash
-# Gemma 4 E2B — 7.2 GB, 128K contexto, Text + Image
-ollama pull gemma4:e2b
-```
-
-### Verificar que los modelos están descargados
-
-```powershell
-ollama list
-```
-
-Deberías ver algo como:
-```
-NAME            ID              SIZE    MODIFIED
-gemma4:e4b      ...             9.6 GB  ...
-```
-
----
-
-## Paso 5: Configurar API Key de Gemini (para Embeddings)
-
-1. Ve a [Google AI Studio](https://aistudio.google.com/) e inicia sesión con tu cuenta Google.
-2. Haz clic en **"Get API Key"** → **"Create API key"**.
-3. Copia la clave generada.
-4. En la raíz del repositorio, crea un archivo `.env`:
-
-```
-GOOGLE_API_KEY=tu_clave_aqui
-```
-
-> El archivo `.env` ya está en `.gitignore` — nunca se subirá al repositorio. **Nunca compartas esta clave.**
-
-**Verificar que funciona:**
 ```python
-from dotenv import load_dotenv
+import ollama
+
+# Cambia a "gemma4:e2b" si bajaste el más chico
+MODEL = "gemma4:e4b" 
+
+print(f"🤖 Probando {MODEL}...")
+response = ollama.chat(
+    model=MODEL,
+    messages=[{"role": "user", "content": "¿Qué es un RAG en una frase simple?"}]
+)
+print(f"Respuesta: {response.message.content}")
+```
+
+---
+
+## Paso 5: Configurar Gemini API (Embeddings)
+
+Para buscar información en documentos (RAG), usaremos los **Embeddings** de Google Gemini, que son muy precisos y rápidos.
+
+1. Ve a **[Google AI Studio](https://aistudio.google.com/)**.
+2. Haz clic en **"Get API Key"** → **"Create API key"**.
+3. En la raíz del repositorio, crea un archivo llamado `.env` con este contenido:
+   ```
+   GOOGLE_API_KEY=tu_clave_aqui
+   ```
+
+### ✅ Comprobación con Python
+```python
 import os
+from dotenv import load_dotenv
 from google import genai
 
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# Probar los embeddings
 result = client.models.embed_content(
     model="gemini-embedding-001",
-    contents="Hola, estoy probando los embeddings de Gemini."
+    contents="Hola mundo"
 )
-print(f"✅ Embeddings OK — Dimensiones: {len(result.embeddings[0].values)}")
-# Esperado: ✅ Embeddings OK — Dimensiones: 3072
+print(f"✅ Gemini Embeddings OK — Dimensiones: {len(result.embeddings[0].values)}")
+# Deberías ver: Dimensiones: 3072
 ```
 
 ---
 
-## Paso 6: Verificaciones finales
+## Paso 6: Autenticarse en Hugging Face (Tokenizer)
 
-Ejecuta estas verificaciones en orden antes de empezar con los notebooks:
+Aunque corramos el modelo localmente, a veces necesitamos el **Tokenizer** oficial desde Hugging Face para contar palabras/tokens con precisión.
 
-**Verificar Ollama texto:**
-```python
-import ollama
+### A. Aceptar términos en la web (Obligatorio)
+1. Ve a: **[huggingface.co/google/gemma-2-2b](https://huggingface.co/google/gemma-2-2b)**.
+2. Si ves un botón de **"Accept"** o **"Request Access"**, dale clic (es instantáneo).
 
-response = ollama.chat(
-    model="gemma4:e4b",  # o gemma4:e2b
-    messages=[{"role": "user", "content": "¿Cuántos planetas tiene el sistema solar? Responde en una línea."}]
-)
-print(response.message.content)
+### B. Login en la terminal
+```powershell
+hf auth login
 ```
+Usa tu token de **Hugging Face → Settings → Tokens** (debe ser tipo "Read").
 
-**Verificar Ollama multimodal (visión):**
-```python
-import ollama
-
-response = ollama.chat(
-    model="gemma4:e4b",
-    messages=[{
-        "role": "user",
-        "content": "Describe esta imagen en español en 2 oraciones.",
-        "images": ["ruta/a/tu/imagen.jpg"]  # path local o URL
-    }]
-)
-print(response.message.content)
-```
-
-**Verificar transformers (requiere Paso 2.5 completado):**
+### ✅ Comprobación con Python
 ```python
 from transformers import AutoTokenizer
 
-# Requiere: (1) haber aceptado los términos en huggingface.co/google/gemma-2-2b
-#           (2) haber corrido 'hf auth login' en la terminal
+# Esto fallará si no hiciste el login arriba o no aceptaste los términos en la web
 tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b")
 tokens = tokenizer("Hola, ¿cómo estás?")
-print(f"✅ Transformers OK — {len(tokens['input_ids'])} tokens")
-# Esperado: ✅ Transformers OK — 9 tokens
+print(f"✅ Tokenizer OK — {len(tokens['input_ids'])} tokens generados.")
 ```
 
-> Si aún no has completado el Paso 2.5, puedes verificar `transformers` con un modelo abierto sin restricciones:
-> ```python
-> from transformers import AutoTokenizer
-> tokenizer = AutoTokenizer.from_pretrained("gpt2")  # sin login
-> print(f"✅ Transformers OK — {len(tokenizer('Hola mundo')['input_ids'])} tokens")
-> ```
+---
+
+¡Listo! Ya tienes todo el ecosistema configurado para empezar con RAG.
