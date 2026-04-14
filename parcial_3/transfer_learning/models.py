@@ -24,28 +24,28 @@ class TransferLearningPetModel(pl.LightningModule):
             # Reemplazar cabezal para nuestro dataset (siempre descongelado)
             self.backbone.classifier[1] = nn.Linear(num_features, num_classes)
             
-        elif model_name == 'resnet50':
-            weights = models.ResNet50_Weights.DEFAULT
-            self.backbone = models.resnet50(weights=weights)
-            num_features = self.backbone.fc.in_features
+        # elif model_name == 'resnet50':
+        #     weights = models.ResNet50_Weights.DEFAULT
+        #     self.backbone = models.resnet50(weights=weights)
+        #     num_features = self.backbone.fc.in_features
             
-            if freeze_backbone:
-                for param in self.backbone.parameters():
-                    param.requires_grad = False
+        #     if freeze_backbone:
+        #         for param in self.backbone.parameters():
+        #             param.requires_grad = False
                     
-            # Reemplazar cabezal
-            self.backbone.fc = nn.Linear(num_features, num_classes)
+        #     # Reemplazar cabezal
+        #     self.backbone.fc = nn.Linear(num_features, num_classes)
             
-        elif model_name == 'mobilenet_v3_large':
-            weights = models.MobileNet_V3_Large_Weights.DEFAULT
-            self.backbone = models.mobilenet_v3_large(weights=weights)
-            num_features = self.backbone.classifier[3].in_features
+        # elif model_name == 'mobilenet_v3_large':
+        #     weights = models.MobileNet_V3_Large_Weights.DEFAULT
+        #     self.backbone = models.mobilenet_v3_large(weights=weights)
+        #     num_features = self.backbone.classifier[3].in_features
             
-            if freeze_backbone:
-                for param in self.backbone.parameters():
-                    param.requires_grad = False
+        #     if freeze_backbone:
+        #         for param in self.backbone.parameters():
+        #             param.requires_grad = False
                     
-            self.backbone.classifier[3] = nn.Linear(num_features, num_classes)
+        #     self.backbone.classifier[3] = nn.Linear(num_features, num_classes)
         else:
             raise ValueError(f"Modelo {model_name} no implementado")
 
@@ -66,15 +66,15 @@ class TransferLearningPetModel(pl.LightningModule):
             x = self.backbone.avgpool(x)
             return torch.flatten(x, 1)
             
-        elif isinstance(self.backbone, models.EfficientNet):
-            x = self.backbone.features(x)
-            x = self.backbone.avgpool(x)
-            return torch.flatten(x, 1)
+        # elif isinstance(self.backbone, models.EfficientNet):
+        #     x = self.backbone.features(x)
+        #     x = self.backbone.avgpool(x)
+        #     return torch.flatten(x, 1)
 
-        elif isinstance(self.backbone, models.MobileNetV3):
-            x = self.backbone.features(x)
-            x = self.backbone.avgpool(x)
-            return torch.flatten(x, 1)
+        # elif isinstance(self.backbone, models.MobileNetV3):
+        #     x = self.backbone.features(x)
+        #     x = self.backbone.avgpool(x)
+        #     return torch.flatten(x, 1)
             
     def training_step(self, batch, batch_idx):
         x, y = batch
