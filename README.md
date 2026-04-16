@@ -7,7 +7,7 @@ El objetivo principal de esta etapa (Parcial 3) es la transición de conceptos p
 ## 🚀 Temario y Enfoque
 
 - **Entrenamiento Optimizado**: Uso estricto de **PyTorch Lightning** (`pl.LightningModule`) para abstraer ciclos de entrenamiento, crear código limpio y escalable (e.g., Transfer Learning con arquitecturas CNN modernas).
-- **Inferencia State-of-the-Art (SOTA)**: Consumo de APIs nativas y modelos avanzados de Visión por Computadora (**YOLOv8**, **SAM / FastSAM**) y NLP/LLMs (**Hugging Face**, **llama-cpp-python**).
+- **Inferencia State-of-the-Art (SOTA)**: Consumo de APIs nativas y modelos avanzados de Visión por Computadora (**YOLO11**, **SAM / FastSAM**) y NLP/LLMs (**Hugging Face**, **llama-cpp-python**).
 - **Módulos Locales y Escalables**: Trabajo con modelos ligeros (GGUF, Q4_K_M) y bases vectoriales simples para RAG, garantizando que el diseño pueda correr eficientemente en las computadoras portátiles de los estudiantes y luego escale hacia la nube.
 - **Narrativa "Show, Don't Tell"**: Énfasis en la visualización interactiva de resultados tangibles utilizando `plotly`.
 
