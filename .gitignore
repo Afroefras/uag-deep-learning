@@ -52,3 +52,4 @@ datasets/
 
 # Secretos
 .env
+/parcial_3/rag/local
