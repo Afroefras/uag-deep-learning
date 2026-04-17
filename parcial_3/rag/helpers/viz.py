@@ -179,9 +179,8 @@ def plot_embeddings_3d(
         x=coords[:, 0],
         y=coords[:, 1],
         z=coords[:, 2],
-        mode="markers+text",
+        mode="markers",
         text=labels,
-        textposition="top center",
         marker=dict(
             size=8,
             color=colors,
