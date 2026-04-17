@@ -225,34 +225,127 @@ def plot_attention_heatmap(
 
     Returns:
         Figura de Plotly de mapa de calor.
-
-    Ejemplo:
+    Example:
         from helpers.viz import plot_attention_heatmap
         fig = plot_attention_heatmap(attn[0][layer][head].numpy(), tokens)
         fig.show()
     """
+    # Limpiamos caracteres raros de visualización
     display_tokens = [t.replace("▁", "·") for t in tokens]
 
+    # Creamos el mapa de calor
     fig = go.Figure(data=go.Heatmap(
         z=attention_matrix,
         x=display_tokens,
         y=display_tokens,
-        colorscale="Viridis",
+        # CAMBIO 1: Paleta de colores más vibrante y contrastada para fondo oscuro
+        colorscale="Blues",
         hovertemplate="<b>Query: %{y}</b><br>Key: %{x}<br>Atención: %{z:.4f}<extra></extra>",
         colorbar=dict(title="Peso de atención"),
     ))
 
+    # Actualizamos el diseño
     fig.update_layout(
         title=dict(
             text=f"{title} — Capa {layer}, Cabeza {head}",
-            font=dict(size=16, color="white"),
+            font=dict(size=16),
         ),
-        template="plotly_dark",
         xaxis=dict(title="Key (a qué mira)", tickangle=-45),
         yaxis=dict(title="Query (quién mira)", autorange="reversed"),
         height=500,
         margin=dict(l=80, r=40, t=80, b=100),
-        plot_bgcolor="#1e1e2e",
-        paper_bgcolor="#1e1e2e",
     )
     return fig
+
+
+def plot_transformer_attention(
+    model,
+    tokenizer,
+    text: str,
+    layer: int = None,
+    head: int = None,
+    find_connection: list[str] = None,
+    title: str = "Atención en el Transformer",
+) -> go.Figure:
+    """
+    Realiza la inferencia y visualiza la atención de un modelo tipo Transformer.
+    Si se provee 'find_connection', busca automáticamente la capa/cabeza con mayor atención.
+
+    Args:
+        model: Modelo de Hugging Face (ej. bert_model).
+        tokenizer: Tokenizador (ej. bert_tokenizer).
+        text: La frase a analizar.
+        layer: Capa específica a visualizar (0-indexed).
+        head: Cabeza específica a visualizar (0-indexed).
+        find_connection: Opcional. Lista de 2 strings [query, key] para buscar la mejor conexión.
+        title: Título del gráfico.
+
+    Returns:
+        tuple: (figura_plotly, atenciones_tupla, lista_tokens)
+    """
+    try:
+        import torch
+    except ImportError as e:
+        raise ImportError(
+            "PyTorch no está instalado. Instálalo con: pip install torch"
+        ) from e
+
+    # 1. Tokenización e Inferencia
+    inputs = tokenizer(text, return_tensors="pt")
+    tokens = tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
+
+    with torch.no_grad():
+        outputs = model(**inputs)
+
+    if not hasattr(outputs, "attentions") or outputs.attentions is None:
+        raise ValueError(
+            "El modelo no devolvió atenciones. Asegúrate de cargarlo con 'output_attentions=True'."
+        )
+
+    atenciones = outputs.attentions  # Tupla de tensores (1, heads, seq, seq)
+
+    # 2. Búsqueda automática de la mejor conexión
+    mejor_capa, mejor_cabeza = 0, 0
+    if find_connection and len(find_connection) == 2:
+        try:
+            # Buscamos los índices de los tokens
+            idx_q = tokens.index(find_connection[0])
+            idx_k = tokens.index(find_connection[1])
+
+            mejor_peso = -1
+            for l in range(len(atenciones)):
+                for h in range(atenciones[l].shape[1]):
+                    # Peso: Capa L, Cabeza H, Token Q mira a Token K
+                    peso = atenciones[l][0, h, idx_q, idx_k].item()
+                    if peso > mejor_peso:
+                        mejor_peso = peso
+                        mejor_capa, mejor_cabeza = l, h
+
+            # Si no se especificó capa/cabeza, usamos la mejor encontrada
+            if layer is None: layer = mejor_capa
+            if head is None: head = mejor_cabeza
+
+            print(f"🕵️‍♂️ ¡Magia encontrada! Para '{find_connection[0]}' -> '{find_connection[1]}':")
+            print(f"   Usa la Capa {mejor_capa}, Cabeza {mejor_cabeza} (Atención: {mejor_peso*100:.1f}%)")
+
+        except ValueError:
+            print(f"⚠️ No se encontró la pareja {find_connection} en los tokens: {tokens}")
+            if layer is None: layer = 0
+            if head is None: head = 0
+    else:
+        # Defaults si no se especifica nada
+        if layer is None: layer = 0
+        if head is None: head = 0
+
+    # 3. Visualización usando la función existente
+    attn_matrix = atenciones[layer][0, head].cpu().numpy()
+
+    fig = plot_attention_heatmap(
+        attn_matrix,
+        tokens,
+        title=title,
+        layer=layer,
+        head=head,
+    )
+
+    return fig, atenciones, tokens
