@@ -42,7 +42,6 @@ def get_client():
     """
     # Buscar el .env en la raíz del repo (2 niveles arriba de helpers/)
     env_path = Path().cwd().parent.parent.parent / ".env"
-    print(env_path)
     if env_path.exists():
         load_dotenv(env_path)
     else:
