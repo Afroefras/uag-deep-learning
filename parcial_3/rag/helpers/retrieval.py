@@ -6,6 +6,8 @@ Funciones:
     - retrieve_top_k: Recupera los K chunks más relevantes para un query.
     - build_rag_prompt: Construye el prompt completo (contexto + pregunta) para el LLM.
     - format_retrieval_results: Imprime los resultados de búsqueda de forma legible.
+    - rag_query: Pipeline RAG completo (query → embed → retrieve → generate).
+    - compare_with_without_rag: Compara respuesta SIN RAG vs CON RAG.
 """
 
 import numpy as np
@@ -113,9 +115,9 @@ def build_rag_prompt(
     """
     if system_instruction is None:
         system_instruction = (
-            "Eres un asistente experto en el juego de cartas UNO. "
+            "Eres un asistente experto. "
             "Responde ÚNICAMENTE basándote en el contexto proporcionado. "
-            "Si la información no está en el contexto, di 'No encontré esa información en las reglas.' "
+            "Si la información no está en el contexto, di 'No encontré esa información en el documento.' "
             "Responde siempre en español, de forma clara y concisa."
         )
 
@@ -158,3 +160,149 @@ def format_retrieval_results(results: list[dict], query: str) -> None:
             preview += "..."
         print(f"        {preview!r}")
         print(f"{'─' * 65}")
+
+
+def rag_query(
+    query: str,
+    corpus_embeddings,
+    chunks: list[dict],
+    model: str = "gemma4:e4b",
+    system_instruction: str | None = None,
+    k: int = 2,
+    client=None,
+    verbose: bool = True,
+) -> dict:
+    """
+    Pipeline RAG completo: query → embed → retrieve top-K → generate con LLM.
+
+    Args:
+        query: La pregunta del usuario.
+        corpus_embeddings: Array numpy (N, D) con los embeddings del corpus.
+        chunks: Lista de dicts con "section" y "content".
+        model: Modelo Ollama a usar para la generación.
+        system_instruction: Instrucción de sistema para el prompt RAG.
+        k: Número de chunks a recuperar.
+        client: Cliente de Gemini para embeddings. Si None, lo crea.
+        verbose: Si True, imprime información del proceso.
+
+    Returns:
+        Dict con claves:
+            - "query": la pregunta original.
+            - "answer": la respuesta generada por el LLM.
+            - "retrieved": los chunks recuperados (lista de dicts).
+            - "prompt": el prompt completo enviado al LLM.
+
+    Ejemplo:
+        from helpers.retrieval import rag_query
+        result = rag_query("¿Cuántas clases tiene el modelo?", embeddings, chunks)
+        print(result["answer"])
+    """
+    try:
+        import ollama
+    except ImportError as e:
+        raise ImportError(
+            "ollama no está instalado. Instálalo con: pip install ollama"
+        ) from e
+
+    from helpers.embeddings import embed_text, get_client
+
+    if client is None:
+        client = get_client()
+
+    # 1. Embed query
+    query_embed = embed_text(query, client=client)
+
+    # 2. Retrieve top-K
+    retrieved = retrieve_top_k(query_embed, corpus_embeddings, chunks, k=k)
+
+    if verbose:
+        format_retrieval_results(retrieved, query)
+
+    # 3. Build prompt
+    prompt = build_rag_prompt(query, retrieved, system_instruction=system_instruction)
+
+    # 4. Generate
+    r = ollama.chat(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        options={"temperature": 0.3, "top_p": 0.95, "top_k": 64},
+    )
+
+    return {
+        "query": query,
+        "answer": r.message.content,
+        "retrieved": retrieved,
+        "prompt": prompt,
+    }
+
+
+def compare_with_without_rag(
+    query: str,
+    corpus_embeddings,
+    chunks: list[dict],
+    model: str = "gemma4:e4b",
+    system_instruction: str | None = None,
+    k: int = 2,
+    client=None,
+) -> dict:
+    """
+    Compara la respuesta de un LLM SIN contexto vs CON contexto RAG.
+
+    Útil para demostrar el valor de RAG: el mismo LLM, la misma pregunta,
+    pero con y sin los chunks recuperados.
+
+    Args:
+        query: La pregunta del usuario.
+        corpus_embeddings: Array numpy (N, D) con los embeddings del corpus.
+        chunks: Lista de dicts con "section" y "content".
+        model: Modelo Ollama a usar para la generación.
+        system_instruction: Instrucción de sistema para el prompt RAG.
+        k: Número de chunks a recuperar.
+        client: Cliente de Gemini para embeddings. Si None, lo crea.
+
+    Returns:
+        Dict con claves:
+            - "query": la pregunta original.
+            - "sin_rag": respuesta sin contexto.
+            - "con_rag": respuesta con contexto (dict completo de rag_query).
+
+    Ejemplo:
+        from helpers.retrieval import compare_with_without_rag
+        cmp = compare_with_without_rag("¿Qué arquitectura usa?", embeddings, chunks)
+        print("SIN RAG:", cmp["sin_rag"])
+        print("CON RAG:", cmp["con_rag"]["answer"])
+    """
+    try:
+        import ollama
+    except ImportError as e:
+        raise ImportError(
+            "ollama no está instalado. Instálalo con: pip install ollama"
+        ) from e
+
+    from helpers.embeddings import get_client
+
+    if client is None:
+        client = get_client()
+
+    # SIN RAG
+    r_sin = ollama.chat(
+        model=model,
+        messages=[{
+            "role": "user",
+            "content": f"Responde en español: {query}",
+        }],
+        options={"temperature": 0.3, "top_p": 0.95, "top_k": 64},
+    )
+
+    # CON RAG
+    con_rag = rag_query(
+        query, corpus_embeddings, chunks,
+        model=model, system_instruction=system_instruction,
+        k=k, client=client, verbose=False,
+    )
+
+    return {
+        "query": query,
+        "sin_rag": r_sin.message.content,
+        "con_rag": con_rag,
+    }
