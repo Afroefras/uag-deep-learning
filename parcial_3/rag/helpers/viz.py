@@ -4,6 +4,7 @@ viz.py — Helpers de visualización para el módulo RAG.
 Funciones:
     - plot_tokens_colored: Visualización de tokens como barras de colores (Plotly).
     - plot_embeddings_3d: Visualización PCA/TSNE en 3D de embeddings (Plotly).
+    - plot_chunk_stats: Gráfica de barras con estadísticas de chunks (Plotly).
     - plot_attention_heatmap: Mapa de calor de pesos de atención (Plotly).
 """
 
@@ -201,6 +202,68 @@ def plot_embeddings_3d(
         ),
         height=600,
         margin=dict(l=0, r=0, t=80, b=0),
+        paper_bgcolor="#1e1e2e",
+    )
+    return fig
+
+
+def plot_chunk_stats(
+    chunks: list[dict],
+    title: str = "Estadísticas de Chunks",
+) -> go.Figure:
+    """
+    Gráfica de barras horizontal con word_count y char_count por sección.
+
+    Args:
+        chunks: Lista de dicts con "section", "word_count" y "char_count".
+        title: Título del gráfico.
+
+    Returns:
+        Figura de Plotly lista para mostrar con fig.show().
+
+    Ejemplo:
+        from helpers.viz import plot_chunk_stats
+        fig = plot_chunk_stats(chunks)
+        fig.show()
+    """
+    section_names = [c["section"][:35] for c in chunks]
+    word_counts = [c["word_count"] for c in chunks]
+    char_counts = [c["char_count"] for c in chunks]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        y=section_names,
+        x=word_counts,
+        name="Palabras",
+        orientation="h",
+        marker_color="#4e79a7",
+        text=word_counts,
+        textposition="outside",
+        hovertemplate="<b>%{y}</b><br>Palabras: %{x}<extra></extra>",
+    ))
+
+    fig.add_trace(go.Bar(
+        y=section_names,
+        x=char_counts,
+        name="Caracteres",
+        orientation="h",
+        marker_color="#f28e2b",
+        text=char_counts,
+        textposition="outside",
+        visible="legendonly",
+        hovertemplate="<b>%{y}</b><br>Caracteres: %{x}<extra></extra>",
+    ))
+
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=18, color="white")),
+        template="plotly_dark",
+        xaxis=dict(title="Conteo"),
+        yaxis=dict(autorange="reversed"),
+        height=max(300, 40 * len(chunks)),
+        margin=dict(l=200, r=60, t=70, b=40),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        plot_bgcolor="#1e1e2e",
         paper_bgcolor="#1e1e2e",
     )
     return fig
