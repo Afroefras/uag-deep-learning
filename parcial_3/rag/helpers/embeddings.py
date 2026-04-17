@@ -86,17 +86,20 @@ def embed_batch(
     texts: list[str],
     client=None,
     verbose: bool = True,
+    delay: float = 0.5,
 ) -> np.ndarray:
     """
     Genera embeddings para una lista de textos.
 
-    Llama la API una vez por texto (Gemini no tiene batch endpoint gratuito).
-    Muestra progreso si verbose=True.
+    Intenta primero con una sola petición al API (batch nativo).
+    Si falla por límites, cae back a modo secuencial con pausa entre peticiones.
 
     Args:
-        texts: Lista de strings a embedear.
-        client: Cliente de Gemini (si None, lo crea automáticamente).
-        verbose: Si True, imprime progreso por consola.
+        texts: Lista de strings a embeddear.
+        client: Cliente de Gemini. Si None, lo crea.
+        verbose: Si True, muestra progreso.
+        delay: Segundos de pausa entre peticiones en modo secuencial (fallback).
+            Aumenta este valor si sigues obteniendo errores 429.
 
     Returns:
         Array numpy de forma (N, 3072) donde N = len(texts).
@@ -106,15 +109,42 @@ def embed_batch(
         vecs = embed_batch(["texto 1", "texto 2", "texto 3"])
         print(vecs.shape)  # (3, 3072)
     """
+    import time
+
     if client is None:
         client = get_client()
 
+    # ── Intento 1: batch nativo (1 sola petición HTTP) ──
+    try:
+        if verbose:
+            print(f"  Generando {len(texts)} embeddings en una sola petición...")
+        result = client.models.embed_content(
+            model=EMBEDDING_MODEL,
+            contents=texts,
+        )
+        vecs = np.stack(
+            [np.array(e.values, dtype=np.float32) for e in result.embeddings],
+            axis=0,
+        )
+        if verbose:
+            print(f"  ✅ {len(texts)} embeddings generados ({EMBEDDING_DIMS} dims c/u)")
+        return vecs
+
+    except Exception as e:
+        if "429" not in str(e) and "RESOURCE_EXHAUSTED" not in str(e):
+            raise  # error distinto, no silenciar
+        if verbose:
+            print(f"  ⚠️  Batch nativo falló (429). Cambiando a modo secuencial (delay={delay}s)...")
+
+    # ── Fallback: secuencial con pausa ──
     embeddings = []
     for i, text in enumerate(texts):
         if verbose:
             print(f"  Embeddiendo chunk {i + 1}/{len(texts)}...", end="\r")
         vec = embed_text(text, client=client)
         embeddings.append(vec)
+        if i < len(texts) - 1:
+            time.sleep(delay)
 
     if verbose:
         print(f"  ✅ {len(texts)} embeddings generados ({EMBEDDING_DIMS} dims c/u)    ")
