@@ -50,6 +50,9 @@ datasets/
 # YOLO
 /parcial_3/yolo/local
 
+# RAG
+/parcial_3/rag/local
+
 # Secretos
 .env
 /parcial_3/rag/local
