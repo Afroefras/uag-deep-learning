@@ -1,5 +1,6 @@
 import pandas as pd
 import requests
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from IPython.display import display, HTML
 
@@ -12,20 +13,33 @@ def fetch_met_query(query: str, n_target: int = 10, dept_id: int = 11) -> list[d
     Busca pinturas en el MET por término temático.
     dept_id=11 = European Paintings (Renacimiento → s.XX).
     """
-    r = requests.get(MET_BASE + "/search", params={
-        "hasImages": "true",
-        "isPublicDomain": "true",
-        "departmentId": dept_id,
-        "q": query,
-    }, timeout=15)
-    ids = r.json().get("objectIDs") or []
+    ids = []
+    for attempt in range(3):
+        try:
+            r = requests.get(MET_BASE + "/search", params={
+                "hasImages": "true",
+                "isPublicDomain": "true",
+                "departmentId": dept_id,
+                "q": query,
+            }, timeout=15)
+            if r.status_code == 200:
+                ids = r.json().get("objectIDs") or []
+                break
+            else:
+                time.sleep(1)
+        except Exception:
+            time.sleep(1)
 
     results = []
     for obj_id in ids:
         if len(results) >= n_target:
             break
         try:
-            obj = requests.get(MET_BASE + f"/objects/{obj_id}", timeout=8).json()
+            time.sleep(0.1)  # Pequeña pausa para no saturar la API
+            r_obj = requests.get(MET_BASE + f"/objects/{obj_id}", timeout=8)
+            if r_obj.status_code != 200:
+                continue
+            obj = r_obj.json()
             img = obj.get("primaryImageSmall", "")
             if not img or not obj.get("isPublicDomain"):
                 continue
