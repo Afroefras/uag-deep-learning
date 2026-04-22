@@ -130,7 +130,7 @@ client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Probar los embeddings
 result = client.models.embed_content(
-    model="gemini-embedding-001",
+    model="gemini-embedding-2-preview",
     contents="Hola mundo"
 )
 print(f"✅ Gemini Embeddings OK — Dimensiones: {len(result.embeddings[0].values)}")
