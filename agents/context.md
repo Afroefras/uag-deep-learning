@@ -8,7 +8,7 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
   - `ultralytics` for YOLO/SAM
   - `transformers` pipelines for Hugging Face (tokenizers, models, attention viz)
   - `ollama` (Python client) for local LLMs — backed by [Ollama](https://ollama.com), which handles CUDA/Metal automatically and supports Gemma 4 natively multimodal
-  - `google-genai` for Gemini Embeddings (`gemini-embedding-001`)
+  - `google-genai` for Gemini Embeddings (`gemini-embedding-2-preview`)
 - **Target Audience**: Last-semester students with strong mathematical backgrounds but transitioning into production/engineering. Explain the *why* behind architectural choices. Use Spanish.
 
 ## 2. Notebook Structure & Styling
@@ -34,7 +34,7 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
 - **Dataloaders & Windows**: When creating PyTorch `DataLoader`s, default to `num_workers=0` to prevent crashes/freezes on students' Windows machines. Use `pin_memory=True` and `persistent_workers=True` (when applicable) to optimize data loading.
 - **Local LLMs**: Use **Ollama** as the primary LLM backend — it handles CUDA/Metal/CPU automatically, with no compilation needed. Preferred models: `gemma4:e4b` (~9.6 GB, for demo machine) and `gemma4:e2b` (~7.2 GB, for student laptops). Both are natively multimodal (texto + visión) — no separate projector files needed.
 - **RAG Limits**: Keep context retrieval extremely small (Top 1 or 2 chunks maximum) to prevent overloading local context windows.
-- **Embeddings**: Use `google-genai` with `gemini-embedding-001` (free tier, 3072 dims, API key via `.env`). For offline fallback, `SentenceTransformers` (`all-MiniLM-L6-v2`) is a valid alternative — note it to students as a free, local option in `SETUP.md`.
+- **Embeddings**: Use `google-genai` with `gemini-embedding-2-preview` (free tier, 3072 dims, API key via `.env`). For offline fallback, `SentenceTransformers` (`all-MiniLM-L6-v2`) is a valid alternative — note it to students as a free, local option in `SETUP.md`.
 - **Heavy Vision Models**: Prioritize lighter versions like `YOLO11n` (nano) o `FastSAM` / `MobileSAM` to ensure real-time inference viability on student machines. Usar las cajas delimitadoras (bounding boxes) de YOLO como *prompts* de entrada para SAM es una excelente estrategia pedagógica.
 
 ## 6. Modularización y Estructura (Parcial 3)
@@ -48,7 +48,7 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
 ## 7. RAG Module Specifics (`parcial_3/rag/`)
 - **Secrets**: La API key de Gemini va en un archivo `.env` en la raíz del proyecto (ya está en `.gitignore`). Cargar con `python-dotenv`. **Nunca** hardcodear API keys en los notebooks.
 - **Estructura de helpers**:
-  - `helpers/embeddings.py` — Funciones para generar embeddings con Gemini (`gemini-embedding-001`).
+  - `helpers/embeddings.py` — Funciones para generar embeddings con Gemini (`gemini-embedding-2-preview`).
   - `helpers/retrieval.py` — Chunking de documentos y búsqueda vectorial con `numpy` (dot product, Top-K).
   - `helpers/viz.py` — Visualizaciones de tokens (barras Plotly), matrices de atención, y embeddings 3D.
 - **Formato de documentos**: Los documentos para RAG van en `local/documents/` (`.txt` o `.pdf`). El chunking debe ser explícito y visible en el notebook (mostrar los chunks antes de embedear).
