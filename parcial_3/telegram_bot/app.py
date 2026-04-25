@@ -27,7 +27,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Maneja la recepción de fotos y dispara el pipeline de IA"""
-    status_msg = await update.message.reply_text("Procesando... (Pipeline YOLO -> SAM -> Gemma)")
+    status_msg = await update.message.reply_text("Procesando... (YOLO -> SAM -> Gemma -> Imagen)")
     
     try:
         # 1. Crear directorio si no existe
@@ -50,8 +50,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status_msg.edit_text(story)
         
         if crop_path:
+            caption = "Caricatura dramática (Nano Banana Style) 🎨" if "caricature" in str(crop_path) else "Recorte de SAM."
             with open(crop_path, 'rb') as photo:
-                await update.message.reply_photo(photo=photo, caption="Análisis del recorte realizado por SAM.")
+                await update.message.reply_photo(photo=photo, caption=caption)
 
     except Exception as e:
         await update.message.reply_text(f"Error en el multiverso: {str(e)}")
