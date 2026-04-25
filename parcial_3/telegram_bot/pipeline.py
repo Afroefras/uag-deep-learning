@@ -63,25 +63,34 @@ class DramaPipeline:
         mask = sam_results[0].masks.data[0].cpu().numpy().astype(np.uint8)
         mask = cv2.resize(mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
         
-        # Aplicamos la máscara (multiplicación por 0 o 1)
+        # Aplicamos la máscara (multiplicación por 0 o 1) para el crop
         masked_img = img * mask[:, :, np.newaxis]
         
-        # Hacemos el crop (recorte) final
+        # Hacemos el crop (recorte) final para Gemma
         x1, y1, x2, y2 = map(int, bbox)
         face_crop = masked_img[y1:y2, x1:x2]
         
         crop_path = str(self.output_dir / "temp_crop.jpg")
         cv2.imwrite(crop_path, face_crop)
+        
+        # --- PREPARACIÓN PARA INPAINTING ---
+        # Máscara binaria: 255 (Blanco) = Área a editar (Persona), 0 (Negro) = Área a preservar (Fondo)
+        mask_inpainting = mask * 255
+        
+        _, base_img_encoded = cv2.imencode('.jpg', img)
+        base_image_bytes = base_img_encoded.tobytes()
+        
+        _, mask_img_encoded = cv2.imencode('.png', mask_inpainting)
+        mask_image_bytes = mask_img_encoded.tobytes()
 
         # --- PASO 4: RAZONAMIENTO Y PROMPT (Gemma vía Ollama) ---
         prompt_gemma = """
         Analiza esta expresión facial y el ambiente. 
-        1. Inventa una biografía trágica, exagerada y graciosa de por qué esta persona está así.
-           Usa un toque de Gen Z slang (como 'delulu', 'vibes', 'no cap', 'core', 'lowkey') sin dar cringe.
-           Sé breve y contundente (máximo 2 enunciados).
-        2. Genera un prompt de 10 palabras para crear una caricatura de esta persona en estilo 'Nano Banana Digital Art'.
-           El prompt DEBE describir rasgos físicos reales del usuario en la foto (ej: lentes, barba, tipo de cabello) 
-           para que el resultado se parezca a él, pero exagerando todo dramáticamente.
+        1. Inventa una biografía profundamente dramática, existencial y exagerada sobre por qué esta persona está así.
+           Sé breve y contundente (máximo 2 enunciados). Evita modismos modernos o slang.
+        2. Genera un prompt de 10 palabras para transformar ESTA FIGURA en una caricatura estilo 'Nano Banana Digital Art'.
+           Describe ÚNICAMENTE cómo alterar los rasgos humanos (ej: exagerar ojos, añadir lentes dramáticos, bigote de poeta).
+           No menciones el fondo, ya que será preservado mediante una máscara.
         
         Responde estrictamente en este formato:
         HISTORIA: [Tu historia]
@@ -91,28 +100,41 @@ class DramaPipeline:
         response = ollama.generate(model="gemma4:e4b", prompt=prompt_gemma, images=[crop_path])
         raw_text = response['response']
         
-        # --- PASO 5: GENERACIÓN ARTÍSTICA (Gemini Imagen) ---
+        # --- PASO 5: GENERACIÓN ARTÍSTICA (Gemini Imagen - Inpainting) ---
         final_image_path = crop_path # Por defecto usamos el recorte si falla Imagen
         
         if self.gemini_client and "PROMPT:" in raw_text:
             try:
+                from google.genai import types
+                
                 # Extraemos el prompt artístico generado por Gemma
                 artist_prompt = raw_text.split("PROMPT:")[1].strip()
-                print(f"Generando Caricatura: {artist_prompt}")
+                print(f"Generando Inpainting: {artist_prompt}")
                 
-                # Imagen 4.0 Fast es ideal para demos: rápida y eficiente.
+                # Configurar objetos de imagen con data/mime_type
+                image_input = types.Image(image_bytes=base_image_bytes, mime_type="image/jpeg")
+                mask_input = types.Image(image_bytes=mask_image_bytes, mime_type="image/png")
+                
+                # Llamada a Imagen 4.0 Fast con Inpainting
                 img_response = self.gemini_client.models.generate_images(
                     model='imagen-4.0-fast-generate-001',
                     prompt=artist_prompt,
-                    config={'number_of_images': 1}
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        masked_image=types.MaskedImage(
+                            image=image_input,
+                            mask=mask_input,
+                            mask_mode="MASK_MODE_INPAINT_ADDITION"
+                        )
+                    )
                 )
                 
                 caricature_path = str(self.output_dir / "caricature.jpg")
                 img_response.generated_images[0].image.save(caricature_path)
                 final_image_path = caricature_path
-                print("¡NanoBanana generado con éxito!")
+                print("¡NanoBanana (Inpainting) generado con éxito!")
             except Exception as e:
-                print(f"Error en Imagen: {e}")
+                print(f"Error en Inpainting: {e}")
         
         # Limpiamos la respuesta para el usuario (le quitamos el prompt interno)
         user_text = raw_text.split("PROMPT:")[0].replace("HISTORIA:", "").strip()
