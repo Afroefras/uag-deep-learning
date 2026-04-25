@@ -31,7 +31,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         # 1. Crear directorio si no existe
-        folder = Path("input_photos")
+        folder = Path("inputs")
         folder.mkdir(exist_ok=True)
 
         # 2. Generar nombre dinámico: ID_YYYYMMDD_HHMMSS.jpg
