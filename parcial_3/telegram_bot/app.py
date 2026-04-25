@@ -50,7 +50,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status_msg.edit_text(story)
         
         if crop_path:
-            caption = "Caricatura dramática (Nano Banana Style) 🎨" if "caricature" in str(crop_path) else "Recorte de SAM."
+            caption = "Así te imagino" if "caricature" in str(crop_path) else "Recorte de SAM."
             with open(crop_path, 'rb') as photo:
                 await update.message.reply_photo(photo=photo, caption=caption)
 
