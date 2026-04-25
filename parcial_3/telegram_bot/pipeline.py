@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 from ultralytics import YOLO, SAM
-import ollama # Asumiendo que usamos Ollama para Gemma 4 local
+import ollama
 
 class DramaPipeline:
     def __init__(self):
@@ -14,6 +14,9 @@ class DramaPipeline:
         print("Cargando SAM...")
         SAM_PATH = r"weights\sam_b.pt"
         self.sam = SAM(SAM_PATH)
+
+        # Asegurar carpetas de salida
+        os.makedirs("outputs", exist_ok=True)
         
     def process_image(self, image_path):
         """
@@ -46,7 +49,7 @@ class DramaPipeline:
         x1, y1, x2, y2 = map(int, bbox)
         face_crop = masked_img[y1:y2, x1:x2]
         
-        crop_path = "assets/images/faces/temp_crop.jpg"
+        crop_path = "outputs/temp_crop.jpg"
         cv2.imwrite(crop_path, face_crop)
 
         # 4. Razonamiento con Gemma 4
