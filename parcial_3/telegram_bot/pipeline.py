@@ -97,14 +97,13 @@ class DramaPipeline:
 
         # --- PASO 4: RAZONAMIENTO Y PROMPT (Gemma vía Ollama) ---
         prompt_gemma = """
-        Analiza esta expresión facial y el ambiente. 
-        1. Inventa una biografía profundamente dramática y SARCÁSTICA sobre por qué esta persona está así.
-           ENFÓCATE en el agotamiento existencial de ser un estudiante de IA que debe aprender algo nuevo cada día porque todo se vuelve obsoleto en 24 horas.
-           HÁBLALE DIRECTAMENTE AL USUARIO (en segunda persona, ej: 'Tu mirada grita que...').
-           Sé breve y contundente (máximo 2 enunciados).
+        Analiza esta expresión facial. 
+        1. Inventa un comentario sarcástico, corto y MUY PESIMISTA sobre tu vida como estudiante de IA.
+           Búrlate de lo inútil que es estudiar algo hoy si mañana sale una herramienta que lo hace solo. 
+           Habla de forma natural, como un amigo cínico (ej: 'Esa cara es de alguien que...'). 
+           Máximo 2 enunciados cortos. Que sea gracioso por lo real.
         2. Genera un prompt de 10 palabras para transformar ESTA FIGURA en una caricatura estilo 'Nano Banana Digital Art'.
            Describe ÚNICAMENTE cómo alterar los rasgos humanos (ej: exagerar ojos, añadir lentes dramáticos, bigote de poeta).
-           No menciones el fondo.
         
         Responde estrictamente en este formato:
         HISTORIA: [Tu historia]
