@@ -11,55 +11,35 @@ class DramaPipeline:
     def __init__(self):
         """
         Constructor: Inicializa modelos y clientes.
-        Diseñado para ser híbrido: Vertex AI para Inpainting PRO o Developer API para modo clase.
+        Configurado exclusivamente para Vertex AI (Modo PRO).
         """
-        # 1. Cargar variables de entorno
         load_dotenv()
         self.project_id = os.getenv("GOOGLE_PROJECT_ID")
         self.location = os.getenv("GOOGLE_LOCATION", "us-central1")
         
-        # 2. Configuración de rutas
         self.weights_dir = Path(r"parcial_3\telegram_bot\weights")
         self.output_dir = self.weights_dir / "outputs"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # 3. Carga de modelos de Visión
         print("Cargando YOLOv8n...")
         self.yolo = YOLO(str(self.weights_dir / "yolo11n.pt")) 
         print("Cargando SAM...")
         self.sam = SAM(str(self.weights_dir / "mobile_sam.pt"))
 
-        # 4. Inicialización de Cliente Híbrido (Vertex vs Gemini)
-        self.gemini_client = None
-        self.mode = None
-
-        if self.project_id:
-            try:
-                # Modo PRO: Vertex AI (Soporta Inpainting/Edit)
-                self.gemini_client = genai.Client(
-                    vertexai=True, 
-                    project=self.project_id, 
-                    location=self.location
-                )
-                self.mode = "VERTEX"
-                print(f"🔥 Modo PRO activado: Vertex AI en {self.project_id}")
-            except Exception as e:
-                print(f"Error inicializando Vertex AI: {e}. Intentando fallback...")
-                self.project_id = None
-
+        # Inicialización obligatoria de Vertex AI
         if not self.project_id:
-            api_key = os.getenv("GOOGLE_API_KEY")
-            if api_key:
-                # Modo Clase: Developer API (Soporta Generate Images estándar)
-                self.gemini_client = genai.Client(api_key=api_key)
-                self.mode = "DEVELOPER"
-                print("🚀 Modo Clase: Usando Developer API Key (Inpainting no soportado)")
-            else:
-                print("⚠️ Aviso: No se encontró API Key ni Project ID en .env")
+            raise ValueError("❌ Error: GOOGLE_PROJECT_ID no encontrado en .env. Vertex AI es obligatorio.")
+        
+        self.gemini_client = genai.Client(
+            vertexai=True, 
+            project=self.project_id, 
+            location=self.location
+        )
+        print(f"🔥 Vertex AI inicializado en: {self.project_id}")
 
     def process_image(self, image_path):
         """
-        Flujo completo: YOLO -> SAM -> Gemma -> Imagen (Híbrido)
+        Flujo completo: YOLO -> SAM -> Gemma -> Imagen (Vertex Inpainting)
         """
         # --- PASO 1: DETECCIÓN (YOLO) ---
         results = self.yolo(image_path, classes=[0])
@@ -88,7 +68,7 @@ class DramaPipeline:
         crop_path = str(self.output_dir / "temp_crop.jpg")
         cv2.imwrite(crop_path, face_crop)
         
-        # Guardar imágenes al disco para Inpainting (from_file es el método correcto en Vertex AI)
+        # Preparar imágenes para Inpainting
         mask_inpainting = mask * 255
         mask_path = str(self.output_dir / "temp_mask.png")
         cv2.imwrite(mask_path, mask_inpainting)
@@ -124,44 +104,35 @@ class DramaPipeline:
                     f"highly detailed, sharp lines, preserving the subject's facial structure."
                 )
                 
-                if self.mode == "VERTEX":
-                    print(f"Generando Inpainting PRO: {full_artist_prompt}")
-                    with open(image_path, 'rb') as f: base_img_bytes = f.read()
-                    with open(mask_path, 'rb') as f: mask_img_bytes = f.read()
-                    
-                    raw_ref = types.RawReferenceImage(
-                        reference_id=1,
-                        reference_image=types.Image(image_bytes=base_img_bytes, mime_type="image/jpeg")
+                print(f"Generando Inpainting 4.0 Fast: {full_artist_prompt}")
+                with open(image_path, 'rb') as f: base_img_bytes = f.read()
+                with open(mask_path, 'rb') as f: mask_img_bytes = f.read()
+                
+                raw_ref = types.RawReferenceImage(
+                    reference_id=1,
+                    reference_image=types.Image(image_bytes=base_img_bytes, mime_type="image/jpeg")
+                )
+                mask_ref = types.MaskReferenceImage(
+                    reference_id=2,
+                    reference_image=types.Image(image_bytes=mask_img_bytes, mime_type="image/png"),
+                    config=types.MaskReferenceConfig(mask_mode="MASK_MODE_USER_PROVIDED")
+                )
+                
+                img_response = self.gemini_client.models.edit_image(
+                    model='imagen-4.0-fast-generate-001',
+                    prompt=full_artist_prompt,
+                    reference_images=[raw_ref, mask_ref],
+                    config=types.EditImageConfig(
+                        edit_mode="EDIT_MODE_INPAINT_INSERTION", 
+                        number_of_images=1,
+                        negative_prompt="generic face, different person, blurry, low quality, distorted anatomy"
                     )
-                    mask_ref = types.MaskReferenceImage(
-                        reference_id=2,
-                        reference_image=types.Image(image_bytes=mask_img_bytes, mime_type="image/png"),
-                        config=types.MaskReferenceConfig(mask_mode="MASK_MODE_USER_PROVIDED")
-                    )
-                    
-                    img_response = self.gemini_client.models.edit_image(
-                        model='imagen-3.0-capability-001',
-                        prompt=full_artist_prompt,
-                        reference_images=[raw_ref, mask_ref],
-                        config=types.EditImageConfig(
-                            edit_mode="EDIT_MODE_INPAINT_INSERTION", 
-                            number_of_images=1,
-                            negative_prompt="generic face, different person, blurry, low quality, distorted anatomy"
-                        )
-                    )
-                else:
-                    # TEXT-TO-IMAGE FALLBACK (Developer API)
-                    print(f"Generando Caricatura Estándar: {artist_prompt}")
-                    img_response = self.gemini_client.models.generate_images(
-                        model='imagen-4.0-fast-generate-001',
-                        prompt=artist_prompt,
-                        config={'number_of_images': 1}
-                    )
+                )
                 
                 caricature_path = str(self.output_dir / "caricature.jpg")
                 img_response.generated_images[0].image.save(caricature_path)
                 final_image_path = caricature_path
-                print(f"¡NanoBanana ({self.mode}) generado!")
+                print("¡NanoBanana (Vertex 4.0 Fast) generado!")
             except Exception as e:
                 print(f"Error en Generación de Imagen: {e}")
         
