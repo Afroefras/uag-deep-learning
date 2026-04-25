@@ -50,7 +50,7 @@ class DramaPipeline:
         bbox = results[0].boxes.xyxy[0].cpu().numpy() # Tomamos la detección más confiable
         
         # --- PASO 2: SEGMENTACIÓN (SAM) ---
-        sam_results = self.sam(image_path, bboxes=[bbox], verbose=False)
+        sam_results = self.sam(image_path, bboxes=np.array([bbox]), verbose=False)
         
         # --- PASO 3: RECORTE Y MÁSCARA (OpenCV) ---
         img = cv2.imread(image_path)
@@ -100,9 +100,9 @@ class DramaPipeline:
                 artist_prompt = raw_text.split("PROMPT:")[1].strip()
                 print(f"Generando Caricatura: {artist_prompt}")
                 
-                # Imagen 3.0 es superior para seguir estilos artísticos complejos.
+                # Imagen 4.0 Fast es ideal para demos: rápida y eficiente.
                 img_response = self.gemini_client.models.generate_images(
-                    model='imagen-3.0-generate-001',
+                    model='imagen-4.0-fast-generate-001',
                     prompt=artist_prompt,
                     config={'number_of_images': 1}
                 )
