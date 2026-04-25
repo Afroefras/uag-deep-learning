@@ -8,11 +8,11 @@ class DramaPipeline:
     def __init__(self):
         # Carga de modelos (Usando versiones ligeras para el MVP)
         print("Cargando YOLOv8n...")
-        YOLO_PATH = r"weights\yolo11n.pt"
+        YOLO_PATH = r"parcial_3\telegram_bot\weights\yolo11n.pt"
         self.yolo = YOLO(YOLO_PATH) 
         
         print("Cargando SAM...")
-        SAM_PATH = r"weights\sam_b.pt"
+        SAM_PATH = r"parcial_3\telegram_bot\weights\mobile_sam.pt"
         self.sam = SAM(SAM_PATH)
 
         # Asegurar carpetas de salida
@@ -35,11 +35,15 @@ class DramaPipeline:
         
         # 3. Aplicar Máscara de SAM y preparar el crop
         img = cv2.imread(image_path)
+        if img is None:
+            return "No pude leer la imagen. Intenta de nuevo.", None
         
         # Extraemos la máscara binaria (0 y 1)
-        # La redimensionamos al tamaño original de la imagen si es necesario
-        mask = sam_results[0].masks.data[0].cpu().numpy()
-        mask = cv2.resize(mask, (img.shape[1], img.shape[0]))
+        if sam_results[0].masks is None:
+            return "No pude segmentar tu cara adecuadamente.", None
+            
+        mask = sam_results[0].masks.data[0].cpu().numpy().astype(np.uint8)
+        mask = cv2.resize(mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
         
         # Multiplicamos la imagen por la máscara para dejar el fondo en negro
         # Convertimos la máscara a 3 canales para que coincida con BGR
