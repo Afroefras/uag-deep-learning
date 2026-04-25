@@ -95,13 +95,12 @@ class DramaPipeline:
 
         # --- PASO 4: RAZONAMIENTO Y PROMPT (Gemma vía Ollama) ---
         prompt_gemma = """
-        Analiza esta expresión facial. 
-        1. Inventa un comentario sarcástico, corto y MUY PESIMISTA sobre tu vida como estudiante de IA.
-           Búrlate de lo inútil que es estudiar algo hoy si mañana sale una herramienta que lo hace solo. 
-           Habla de forma natural, como un amigo cínico (ej: 'Esa cara es de alguien que...'). 
-           Máximo 2 enunciados cortos. Que sea gracioso por lo real.
-        2. Genera un prompt de 10 palabras para transformar ESTA FIGURA en una caricatura estilo 'Nano Banana Digital Art'.
-           Describe ÚNICAMENTE cómo alterar los rasgos humanos (ej: exagerar ojos, añadir lentes dramáticos, bigote de poeta).
+        Analiza detalladamente esta foto.
+        1. Comentario sarcástico y cínico sobre estudiar IA (máximo 2 frases cortas).
+        2. Genera un 'Anchor Prompt' descriptivo de 30 palabras para una caricatura:
+           - CAPA 1 (Identidad): Describe con precisión los accesorios (gorra, lentes) y vello facial del sujeto.
+           - CAPA 2 (Estilo): Define el estilo 'Nano Banana Digital Art' (colores vibrantes, trazos digitales).
+           - CAPA 3 (Drama): Exagera un rasgo (ojos enormes, expresión facial intensa).
         
         Responde estrictamente en este formato:
         HISTORIA: [Tu historia]
@@ -111,21 +110,25 @@ class DramaPipeline:
         response = ollama.generate(model="gemma4:e4b", prompt=prompt_gemma, images=[crop_path])
         raw_text = response['response']
         
-        # --- PASO 5: GENERACIÓN ARTÍSTICA (Vertex Inpainting vs Developer standard) ---
+        # --- PASO 5: GENERACIÓN ARTÍSTICA (Vertex Inpainting) ---
         final_image_path = crop_path
         if self.gemini_client and "PROMPT:" in raw_text:
             try:
                 from google.genai import types
-                artist_prompt = raw_text.split("PROMPT:")[1].strip()
+                
+                # Ingeniería de Prompt Compuesto
+                gemma_description = raw_text.split("PROMPT:")[1].strip()
+                full_artist_prompt = (
+                    f"High-fidelity professional digital caricature of {gemma_description}, "
+                    f"Nano Banana style, artistic exaggeration, cinematic lighting, "
+                    f"highly detailed, sharp lines, preserving the subject's facial structure."
+                )
                 
                 if self.mode == "VERTEX":
-                    # INPAINTING REAL (Solo Vertex AI)
-                    print(f"Generando Inpainting en Vertex: {artist_prompt}")
-                    # Leemos los bytes directamente (equivalente a from_file, que no es classmethod)
-                    with open(image_path, 'rb') as f:
-                        base_img_bytes = f.read()
-                    with open(mask_path, 'rb') as f:
-                        mask_img_bytes = f.read()
+                    print(f"Generando Inpainting PRO: {full_artist_prompt}")
+                    with open(image_path, 'rb') as f: base_img_bytes = f.read()
+                    with open(mask_path, 'rb') as f: mask_img_bytes = f.read()
+                    
                     raw_ref = types.RawReferenceImage(
                         reference_id=1,
                         reference_image=types.Image(image_bytes=base_img_bytes, mime_type="image/jpeg")
@@ -135,11 +138,16 @@ class DramaPipeline:
                         reference_image=types.Image(image_bytes=mask_img_bytes, mime_type="image/png"),
                         config=types.MaskReferenceConfig(mask_mode="MASK_MODE_USER_PROVIDED")
                     )
+                    
                     img_response = self.gemini_client.models.edit_image(
                         model='imagen-3.0-capability-001',
-                        prompt=artist_prompt,
+                        prompt=full_artist_prompt,
                         reference_images=[raw_ref, mask_ref],
-                        config=types.EditImageConfig(edit_mode="EDIT_MODE_INPAINT_INSERTION", number_of_images=1)
+                        config=types.EditImageConfig(
+                            edit_mode="EDIT_MODE_INPAINT_INSERTION", 
+                            number_of_images=1,
+                            negative_prompt="generic face, different person, blurry, low quality, distorted anatomy"
+                        )
                     )
                 else:
                     # TEXT-TO-IMAGE FALLBACK (Developer API)
