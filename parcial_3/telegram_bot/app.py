@@ -27,7 +27,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Maneja la recepción de fotos y dispara el pipeline de IA"""
-    status_msg = await update.message.reply_text("Procesando... (YOLO -> SAM -> Gemma -> Imagen)")
+    status_msg = await update.message.reply_text("Hm, qué curioso... Te analizo ...")
     
     try:
         # 1. Crear directorio si no existe
