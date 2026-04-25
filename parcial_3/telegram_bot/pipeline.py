@@ -88,12 +88,10 @@ class DramaPipeline:
         crop_path = str(self.output_dir / "temp_crop.jpg")
         cv2.imwrite(crop_path, face_crop)
         
-        # Preparar imágenes para Inpainting (Vertex)
+        # Guardar imágenes al disco para Inpainting (from_file es el método correcto en Vertex AI)
         mask_inpainting = mask * 255
-        _, base_img_encoded = cv2.imencode('.jpg', img)
-        base_image_bytes = base_img_encoded.tobytes()
-        _, mask_img_encoded = cv2.imencode('.png', mask_inpainting)
-        mask_image_bytes = mask_img_encoded.tobytes()
+        mask_path = str(self.output_dir / "temp_mask.png")
+        cv2.imwrite(mask_path, mask_inpainting)
 
         # --- PASO 4: RAZONAMIENTO Y PROMPT (Gemma vía Ollama) ---
         prompt_gemma = """
@@ -125,11 +123,11 @@ class DramaPipeline:
                     print(f"Generando Inpainting en Vertex: {artist_prompt}")
                     raw_ref = types.RawReferenceImage(
                         reference_id=1,
-                        reference_image=types.Image(image_bytes=base_image_bytes, mime_type="image/jpeg")
+                        reference_image=types.Image.from_file(image_path)
                     )
                     mask_ref = types.MaskReferenceImage(
                         reference_id=2,
-                        reference_image=types.Image(image_bytes=mask_image_bytes, mime_type="image/png"),
+                        reference_image=types.Image.from_file(mask_path),
                         config=types.MaskReferenceConfig(mask_mode="MASK_MODE_USER_PROVIDED")
                     )
                     img_response = self.gemini_client.models.edit_image(
