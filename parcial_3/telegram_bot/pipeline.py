@@ -75,12 +75,13 @@ class DramaPipeline:
 
         # --- PASO 4: RAZONAMIENTO Y PROMPT (Gemma vía Ollama) ---
         prompt_gemma = """
-        Analiza detalladamente esta foto.
-        1. Comentario sarcástico y cínico sobre estudiar IA (máximo 2 frases cortas).
-        2. Genera un 'Anchor Prompt' descriptivo de 30 palabras para una caricatura:
-           - CAPA 1 (Identidad): Describe con precisión los accesorios (gorra, lentes) y vello facial del sujeto.
-           - CAPA 2 (Estilo): Define el estilo 'Nano Banana Digital Art' (colores vibrantes, trazos digitales).
-           - CAPA 3 (Drama): Exagera un rasgo (ojos enormes, expresión facial intensa).
+        MIRA ESTA FOTO Y SÉ SINCERO.
+        1. COMENTARIO: Di algo sarcástico y MUY CÍNICO sobre esta persona (el usuario) y su cansancio estudiando IA. 
+           Háblale DIRECTAMENTE (ej: 'Esa cara de zombi es porque...'). Máximo 2 frases que den risa por lo reales.
+        2. ANCHOR PROMPT (Imagen): Genera una descripción técnica de 25 palabras para una caricatura Nano Banana.
+           - ES VITAL: Describe el tono de piel exacto, el color de ojos y la forma de la barba/lentes de ESTA persona.
+           - ESTILO: 'High-end stylized digital caricature, maintain subject's ethnicity and core features'.
+           - CAMBIO: Exagera solo los ojos y haz que la ropa parezca de un genio incomprendido.
         
         Responde estrictamente en este formato:
         HISTORIA: [Tu historia]
@@ -96,15 +97,16 @@ class DramaPipeline:
             try:
                 from google.genai import types
                 
-                # Ingeniería de Prompt Compuesto
+                # Ingeniería de Prompt Compuesto de Alta Fidelidad
                 gemma_description = raw_text.split("PROMPT:")[1].strip()
                 full_artist_prompt = (
-                    f"High-fidelity professional digital caricature of {gemma_description}, "
-                    f"Nano Banana style, artistic exaggeration, cinematic lighting, "
-                    f"highly detailed, sharp lines, preserving the subject's facial structure."
+                    f"A detailed, professional digital caricature of the SUBJECT IN THE PHOTO. "
+                    f"Subject traits: {gemma_description}. "
+                    f"Nano Banana Digital Art style, cinematic lighting, sharp focus, "
+                    f"absolute resemblance to the original person's facial structure and ethnicity."
                 )
                 
-                print(f"Generando Inpainting 4.0 Fast: {full_artist_prompt}")
+                print(f"Generando Inpainting de Alta Fidelidad: {full_artist_prompt}")
                 with open(image_path, 'rb') as f: base_img_bytes = f.read()
                 with open(mask_path, 'rb') as f: mask_img_bytes = f.read()
                 
@@ -119,13 +121,14 @@ class DramaPipeline:
                 )
                 
                 img_response = self.gemini_client.models.edit_image(
-                    model='imagen-3.0-capability-001', 
+                    model='imagen-3.0-capability-001',
                     prompt=full_artist_prompt,
                     reference_images=[raw_ref, mask_ref],
                     config=types.EditImageConfig(
                         edit_mode="EDIT_MODE_INPAINT_INSERTION", 
                         number_of_images=1,
-                        negative_prompt="generic face, different person, blurry, low quality, distorted anatomy"
+                        guidance_scale=60.0, # Bajamos un poco para dar más libertad al 'contexto' de la imagen base
+                        negative_prompt="different face, different ethnicity, wrong skin tone, blonde, white person, generic man, low resemblance"
                     )
                 )
                 
