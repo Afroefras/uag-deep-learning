@@ -121,17 +121,22 @@ class DramaPipeline:
                 if self.mode == "VERTEX":
                     # INPAINTING REAL (Solo Vertex AI)
                     print(f"Generando Inpainting en Vertex: {artist_prompt}")
+                    # Leemos los bytes directamente (equivalente a from_file, que no es classmethod)
+                    with open(image_path, 'rb') as f:
+                        base_img_bytes = f.read()
+                    with open(mask_path, 'rb') as f:
+                        mask_img_bytes = f.read()
                     raw_ref = types.RawReferenceImage(
                         reference_id=1,
-                        reference_image=types.Image.from_file(image_path)
+                        reference_image=types.Image(image_bytes=base_img_bytes, mime_type="image/jpeg")
                     )
                     mask_ref = types.MaskReferenceImage(
                         reference_id=2,
-                        reference_image=types.Image.from_file(mask_path),
+                        reference_image=types.Image(image_bytes=mask_img_bytes, mime_type="image/png"),
                         config=types.MaskReferenceConfig(mask_mode="MASK_MODE_USER_PROVIDED")
                     )
                     img_response = self.gemini_client.models.edit_image(
-                        model='imagen-4.0-fast-generate-001',
+                        model='imagen-3.0-capability-001',
                         prompt=artist_prompt,
                         reference_images=[raw_ref, mask_ref],
                         config=types.EditImageConfig(edit_mode="EDIT_MODE_INPAINT_INSERTION", number_of_images=1)
