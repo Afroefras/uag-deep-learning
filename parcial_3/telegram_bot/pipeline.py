@@ -75,10 +75,13 @@ class DramaPipeline:
 
         # --- PASO 4: RAZONAMIENTO Y PROMPT (Gemma vía Ollama) ---
         prompt_gemma = """
-        Analiza esta expresión facial. 
-        1. Inventa una biografía trágica y exagerada de 2 enunciados sobre por qué esta persona está así.
+        Analiza esta expresión facial y el ambiente. 
+        1. Inventa una biografía trágica, exagerada y graciosa de por qué esta persona está así.
+           Usa un toque de Gen Z slang (como 'delulu', 'vibes', 'no cap', 'core', 'lowkey') sin dar cringe.
+           Sé breve y contundente (máximo 2 enunciados).
         2. Genera un prompt de 10 palabras para crear una caricatura de esta persona en estilo 'Nano Banana Digital Art'.
-           El prompt debe pedir rasgos extremadamente exagerados y dramáticos para un efecto cómico de caricatura.
+           El prompt DEBE describir rasgos físicos reales del usuario en la foto (ej: lentes, barba, tipo de cabello) 
+           para que el resultado se parezca a él, pero exagerando todo dramáticamente.
         
         Responde estrictamente en este formato:
         HISTORIA: [Tu historia]
@@ -97,8 +100,9 @@ class DramaPipeline:
                 artist_prompt = raw_text.split("PROMPT:")[1].strip()
                 print(f"Generando Caricatura: {artist_prompt}")
                 
-                img_response = self.gemini_client.models.generate_image(
-                    model='gemini-2.5-flash-image',
+                # Imagen 3.0 es superior para seguir estilos artísticos complejos.
+                img_response = self.gemini_client.models.generate_images(
+                    model='imagen-3.0-generate-001',
                     prompt=artist_prompt,
                     config={'number_of_images': 1}
                 )
@@ -110,7 +114,9 @@ class DramaPipeline:
             except Exception as e:
                 print(f"Error en Imagen: {e}")
         
-        return raw_text, final_image_path
+        # Limpiamos la respuesta para el usuario (le quitamos el prompt interno)
+        user_text = raw_text.split("PROMPT:")[0].replace("HISTORIA:", "").strip()
+        return user_text, final_image_path
 
 # Prueba rápida si se ejecuta solo
 if __name__ == "__main__":
