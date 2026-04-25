@@ -2,6 +2,7 @@ import os
 import logging
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 from pipeline import DramaPipeline
@@ -13,7 +14,8 @@ logging.basicConfig(
 )
 
 # 2. Inicialización
-TOKEN = 'TU_TELEGRAM_TOKEN_AQUI'
+load_dotenv()
+TOKEN = os.getenv('TELEGRAM_TOKEN')
 pipeline = DramaPipeline()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
