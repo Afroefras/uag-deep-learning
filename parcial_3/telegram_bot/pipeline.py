@@ -119,7 +119,7 @@ class DramaPipeline:
                 )
                 
                 img_response = self.gemini_client.models.edit_image(
-                    model='imagen-4.0-fast-generate-001',
+                    model='imagen-3.0-capability-001', 
                     prompt=full_artist_prompt,
                     reference_images=[raw_ref, mask_ref],
                     config=types.EditImageConfig(
