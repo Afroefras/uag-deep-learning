@@ -22,7 +22,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /start"""
     await update.message.reply_text(
         "Kien eres? 👀\n"
-        "Envíame una foto de tu cara y adivinaré tu historia."
+        "Envíame una foto tuya y adivinaré tu historia."
     )
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
