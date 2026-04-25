@@ -10,6 +10,7 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
   - `ollama` (Python client) for local LLMs — backed by [Ollama](https://ollama.com), which handles CUDA/Metal automatically and supports Gemma 4 natively multimodal
   - `google-genai` for Gemini Embeddings (`gemini-embedding-2-preview`)
 - **Target Audience**: Last-semester students with strong mathematical backgrounds but transitioning into production/engineering. Explain the *why* behind architectural choices. Use Spanish.
+- **Validation Rigor**: Explicitly address **Data Leakage**. When working with medical or grouped data (e.g., CirCor), mandatorily use `StratifiedGroupKFold` to ensure patient-level splits. Generalization is the priority, not just metrics.
 
 ## 2. Notebook Structure & Styling
 - **Minimal, High-Impact Markdown**: Keep Markdown cells extremely concise. Highlight crucial concepts, but avoid walls of text.
@@ -35,7 +36,11 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
 - **Local LLMs**: Use **Ollama** as the primary LLM backend — it handles CUDA/Metal/CPU automatically, with no compilation needed. Preferred models: `gemma4:e4b` (~9.6 GB, for demo machine) and `gemma4:e2b` (~7.2 GB, for student laptops). Both are natively multimodal (texto + visión) — no separate projector files needed.
 - **RAG Limits**: Keep context retrieval extremely small (Top 1 or 2 chunks maximum) to prevent overloading local context windows.
 - **Embeddings**: Use `google-genai` with `gemini-embedding-2-preview` (free tier, 3072 dims, API key via `.env`). For offline fallback, `SentenceTransformers` (`all-MiniLM-L6-v2`) is a valid alternative — note it to students as a free, local option in `SETUP.md`.
-- **Heavy Vision Models**: Prioritize lighter versions like `YOLO11n` (nano) o `FastSAM` / `MobileSAM` to ensure real-time inference viability on student machines. Usar las cajas delimitadoras (bounding boxes) de YOLO como *prompts* de entrada para SAM es una excelente estrategia pedagógica.
+- **Heavy Vision Models**: Prioritize lighter versions like `YOLO11n` (nano) o `FastSAM` / `MobileSAM` to ensure real-time inference viability on student machines.
+  - **Estrategia YOLO+SAM**: Enseñar el uso de **Zero-shot Segmentation** mediante el paso de *Bounding Boxes* de YOLO como *prompts* de entrada para SAM. Es la forma más eficiente y pedagógica de conectar detección y segmentación.
+- **Transfer Learning Strategy**:
+  - **Paso 1: Linear Probe**: Congelar el backbone y entrenar solo la cabeza (MLP) para validar la calidad de las representaciones pre-entrenadas.
+  - **Paso 2: Fine-Tuning**: Descongelar capas superiores solo si el Linear Probe ha convergido y el dataset es suficientemente grande para evitar overfitting.
 
 ## 6. Modularización y Estructura (Parcial 3)
 - **Archivos Separados**: Para mantener las libretas limpias ("sin montañas de código"), la lógica pesada (limpieza, ingeniería de datos, PyTorch Lightning Modules, funciones de Plotly) **debe** aislarse en scripts de ayuda especializados. No sobrecargar un solo `helpers.py`.
@@ -53,6 +58,7 @@ This repository contains Jupyter Notebooks used for teaching Deep Learning to la
   - `helpers/viz.py` — Visualizaciones de tokens (barras Plotly), matrices de atención, y embeddings 3D.
 - **Formato de documentos**: Los documentos para RAG van en `local/documents/` (`.txt` o `.pdf`). El chunking debe ser explícito y visible en el notebook (mostrar los chunks antes de embedear).
 - **Prompt Engineering**: Siempre mostrar el template del prompt completo que se le envía al LLM — incluyendo el contexto recuperado. "Sin magia negra": el alumno debe ver exactamente qué texto entra al modelo.
+- **Robustez en Adquisición**: Para RAG basado en APIs externas (ej. MET Museum), los scripts de ayuda **deben** implementar manejo de errores robusto: reintentos con `backoff`, gestión de `rate-limits` y validación de esquemas JSON para evitar fallos en la canalización de datos.
 - **Scripts standalone**: El script `RAG - Chat Consola.py` sigue el mismo patrón que los scripts de YOLO (`Webcam - YOLO Live.py`): configurable al inicio con constantes en mayúsculas, bloque `if __name__ == '__main__'`.
 - **Modelos Gemma 4 vía Ollama**:
   - Profesor/demo: `ollama pull gemma4:e4b` (~9.6 GB) — para RTX 3070
