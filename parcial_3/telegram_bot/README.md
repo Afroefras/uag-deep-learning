@@ -1,4 +1,4 @@
-# 🎭 Drama Bot MVP
+# 🎭 Telegram Bot MVP
 
 Este es un ejemplo de **Pipeline de Integración Multimodelo** diseñado para demostrar cómo se conectan las piezas de Visión Artificial y Razonamiento (LLM) en un producto real.
 
@@ -21,5 +21,7 @@ Este es un ejemplo de **Pipeline de Integración Multimodelo** diseñado para de
 
 ## Dependencias
 ```bash
-pip install python-telegram-bot ultralytics opencv-python ollama
+pip install python-telegram-bot ultralytics opencv-python ollama python-dotenv
 ```
+
+> **Seguridad:** El token de Telegram debe ir en el archivo `.env`. Nunca subas ese archivo a repositorios públicos.
