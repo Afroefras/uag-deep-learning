@@ -47,7 +47,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         story, crop_path = pipeline.process_image(str(input_path))
         
         # Enviar respuesta al usuario
-        await status_msg.edit_text(story)
+        await status_msg.edit_text(story, parse_mode='Markdown')
         
         if crop_path:
             caption = "Así te imagino" if "caricature" in str(crop_path) else "Recorte de SAM."
@@ -55,7 +55,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_photo(photo=photo, caption=caption)
 
     except Exception as e:
-        await update.message.reply_text(f"Error en el multiverso: {str(e)}")
+        await update.message.reply_text(f"*Error en el multiverso:* {str(e)}", parse_mode='Markdown')
 
 if __name__ == '__main__':
     # 3. Construcción de la Aplicación (Estructura v20+)
