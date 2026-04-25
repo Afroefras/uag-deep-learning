@@ -81,7 +81,7 @@ class DramaPipeline:
         2. ANCHOR PROMPT (Imagen): Genera una descripción técnica de 25 palabras para una caricatura Nano Banana.
            - ES VITAL: Describe el tono de piel exacto, el color de ojos y la forma de la barba/lentes de ESTA persona.
            - ESTILO: 'High-end stylized digital caricature, maintain subject's ethnicity and core features'.
-           - CAMBIO: Exagera solo los ojos y haz que la ropa parezca de un genio incomprendido.
+           - CAMBIO: Exagera un poco el cansancio.
         
         Responde estrictamente en este formato:
         HISTORIA: [Tu historia]
