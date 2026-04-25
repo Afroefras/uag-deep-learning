@@ -112,21 +112,29 @@ class DramaPipeline:
                 artist_prompt = raw_text.split("PROMPT:")[1].strip()
                 print(f"Generando Inpainting: {artist_prompt}")
                 
-                # Configurar objetos de imagen con data/mime_type
-                image_input = types.Image(image_bytes=base_image_bytes, mime_type="image/jpeg")
-                mask_input = types.Image(image_bytes=mask_image_bytes, mime_type="image/png")
+                # 1. Configurar imagen base como RawReferenceImage
+                raw_ref = types.RawReferenceImage(
+                    reference_id=1,
+                    reference_image=types.Image(image_bytes=base_image_bytes, mime_type="image/jpeg")
+                )
                 
-                # Llamada a Imagen 4.0 Fast con Inpainting
-                img_response = self.gemini_client.models.generate_images(
+                # 2. Configurar máscara como MaskReferenceImage indicando que es provista por el usuario
+                mask_ref = types.MaskReferenceImage(
+                    reference_id=2,
+                    reference_image=types.Image(image_bytes=mask_image_bytes, mime_type="image/png"),
+                    config=types.MaskReferenceConfig(
+                        mask_mode="MASK_MODE_USER_PROVIDED"
+                    )
+                )
+                
+                # 3. Llamada a la API de Imagen usando edit_image para Inpainting
+                img_response = self.gemini_client.models.edit_image(
                     model='imagen-4.0-fast-generate-001',
                     prompt=artist_prompt,
-                    config=types.GenerateImagesConfig(
-                        number_of_images=1,
-                        masked_image=types.MaskedImage(
-                            image=image_input,
-                            mask=mask_input,
-                            mask_mode="MASK_MODE_INPAINT_ADDITION"
-                        )
+                    reference_images=[raw_ref, mask_ref],
+                    config=types.EditImageConfig(
+                        edit_mode="EDIT_MODE_INPAINT_INSERTION",
+                        number_of_images=1
                     )
                 )
                 
