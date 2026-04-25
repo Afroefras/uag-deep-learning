@@ -16,7 +16,7 @@ class DramaPipeline:
         self.sam = SAM(SAM_PATH)
 
         # Asegurar carpetas de salida
-        os.makedirs("outputs", exist_ok=True)
+        os.makedirs(r"parcial_3\telegram_bot\weights\outputs", exist_ok=True)
         
     def process_image(self, image_path):
         """
