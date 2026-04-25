@@ -87,6 +87,7 @@ class DramaPipeline:
         prompt_gemma = """
         Analiza esta expresión facial y el ambiente. 
         1. Inventa una biografía profundamente dramática, existencial y exagerada sobre por qué esta persona está así.
+           HÁBLALE DIRECTAMENTE AL USUARIO (en segunda persona, ej: 'Tu mirada revela que...').
            Sé breve y contundente (máximo 2 enunciados). Evita modismos modernos o slang.
         2. Genera un prompt de 10 palabras para transformar ESTA FIGURA en una caricatura estilo 'Nano Banana Digital Art'.
            Describe ÚNICAMENTE cómo alterar los rasgos humanos (ej: exagerar ojos, añadir lentes dramáticos, bigote de poeta).
