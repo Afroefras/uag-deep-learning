@@ -25,7 +25,6 @@ datasets/
 *.xlsx
 *.parquet
 *.json
-*.png
 *.jpg
 *.jpeg
 *.bmp
@@ -56,3 +55,4 @@ datasets/
 # Secretos
 .env
 /parcial_3/rag/local
+/parcial_3/telegram_bot/weights
