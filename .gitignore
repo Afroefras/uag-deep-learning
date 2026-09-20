@@ -56,3 +56,4 @@ datasets/
 .env
 /parcial_3/rag/local
 /parcial_3/telegram_bot/weights
+parcial_1/lightning_logs/
