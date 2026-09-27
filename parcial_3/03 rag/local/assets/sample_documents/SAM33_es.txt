@@ -1,0 +1,672 @@
+## Clasificación de Sonidos de Auscultación Cardíaca mediante Aprendizaje Profundo: Un Marco de 33 Clases Centrado en Datos a través de Aumento Dinámico de Ruido y Adaptación de Dominio Sim-a-Real
+
+**Autores:** Efraín-Ismael Flores-Hernández, Maria G. Zavala-Cerna
+
+**Palabras Clave:** Auscultación cardíaca, Aprendizaje profundo, Adaptación de dominio, Clasificación de fonocardiogramas, Aprendizaje residual, Robustez al ruido.
+
+## Hallazgos Clave
+
+*   Clasifica 33 categorías de sonidos cardíacos utilizando una arquitectura unificada ResNet18-MLP (11.5M parámetros).
+*   Demuestra la resiliencia de las características estructurales bajo aumento dinámico de ruido hospitalario ($\pm(5, 5)$dB).
+*   Cuantifica una grave brecha de dominio sim-a-real, con una precisión de cero disparos que cae al 15.7% en sujetos humanos.
+*   Mitiga el cambio de dominio mediante el ajuste fino exclusivo de la cabeza (head-only fine-tuning), recuperando la precisión base humana de "Normal" al 98.6%.
+*   Valida de manera transparente que la adaptación es fundamentalmente una expansión del límite de decisión, causando una compensación de F1-macro sim del 73.6% a 69.9%.
+
+## Resumen del Estudio
+
+Las enfermedades cardiovasculares siguen siendo la principal causa de mortalidad a nivel mundial, lo que hace que la detección temprana mediante auscultación cardíaca sea crítica, pero depende de la experiencia del clínico. Aunque el aprendizaje automático muestra promesa para la clasificación binaria de sonidos cardíacos, la identificación de patologías multiclasificación en entornos ruidosos sigue siendo un desafío.
+
+Este estudio presenta un marco de dos fases, centrado en datos, para la clasificación de alta granularidad (33 categorías distintas), diseñado como un estudio de viabilidad *in silico* para investigar los mecanismos de adaptación sim-a-real.
+
+### Fase 1: Establecimiento de la Línea Base Robusta
+
+Se estableció una línea base robusta utilizando 2,010 muestras de un maniquí de auscultación de alta fidelidad. Las señales se sometieron a extracción de espectrogramas Mel junto con un aumento dinámico de ruido hospitalario ($\pm(5, 5)$dB SNR). Se utilizó una arquitectura unificada ResNet18-MLP (11.5M parámetros)—que emplea una columna vertebral rígida para la extracción de características y una cabeza densa de 280K parámetros para la plasticidad—logrando una puntuación F1-macro independiente SAM del 73.6%.
+
+### Fase 2: Cuantificación y Mitigación de la Brecha de Dominio
+
+En la Fase 2, se cuantificó directamente la brecha de dominio del simulador a la realidad. Al desplegar el modelo en cero disparos (zero-shot) con grabaciones de smartphone del mundo real de sujetos humanos sanos, el modelo exhibió un grave cambio de dominio, prediciendo un ritmo "Normal" con solo un 15.7% de precisión, debido a que la acústica torácica humana imita matemáticamente las firmas espectrales patológicas.
+
+Demostramos que el ajuste fino exclusivo de la cabeza (protocolo *Leave-One-Subject-Out*) mitiga esta brecha, recuperando la precisión base humana al 98.6%.
+
+### Conclusión
+
+Revelamos de manera crucial que esta alta adaptación es fundamentalmente una expansión del límite de decisión de "Normal", lo que posteriormente engulle patologías simuladas adyacentes y causa una compensación de F1-macro sim del 73.6% a 69.9%.
+
+## Introducción y Carga Global de Enfermedades Cardiovasculares (ECV)
+
+Las enfermedades cardiovasculares (ECV), especialmente la enfermedad cardíaca isquémica y el accidente cerebrovascular, son la principal causa de muerte y discapacidad a nivel mundial y una barrera importante para el desarrollo global (Mensah et al., 2019). La prevalencia global de ECV ha más que duplicado en las últimas décadas, pasando de unos 271 millones de casos en 1990 a más de 523 millones en 2019, y las muertes por ECV aumentaron de 12.1 a 18.6 millones en el mismo período (Roth et al., 2017). Las estimaciones actualizadas muestran que esta tendencia continúa, con alrededor de 626 millones de casos prevalentes de ECV y 19.2 millones de muertes en 2023. Aproximadamente cuatro de cada cinco años de vida ajustados por discapacidad debido a ECV son atribuibles a factores de riesgo modificables, como la hipertensión, dietas no saludables, el colesterol LDL alto, la obesidad, la diabetes, la contaminación del aire, el tabaquismo y la inactividad física (Tan et al., 2025).
+
+Las proyecciones para 2050 anticipan un aumento de aproximadamente el 90% en la prevalencia bruta de ECV y más de 35 millones de muertes anuales por ECV, impulsado en gran medida por el crecimiento poblacional y el envejecimiento, a pesar de las mejoras en la mortalidad estandarizada por edad (Chong et al., 2025).
+
+## Necesidad de Estrategias Diagnósticas de Primera Línea
+
+En este contexto de una carga global de ECV sostenida y distribuida de manera desigual, siendo más pesada en regiones de ingresos bajos y bajos-medios, existe una necesidad apremiante de estrategias de diagnóstico accesibles y de bajo costo para apoyar la detección temprana y el triaje (GBD Collaborators, 2025).
+
+La auscultación cardíaca, introducida hace dos siglos con el estetoscopio de Laënnec, sigue siendo una técnica económica y ampliamente disponible que puede detectar muchas anormalidades cardíacas estructurales cuando se realiza e interpreta correctamente. Proporciona información crucial de detección y pronóstico, guía el uso selectivo de costosas imágenes y es particularmente valiosa donde la ecocardiografía y la atención especializada son escasas (Maganti et al., 2010).
+
+## Limitaciones de la Auscultación en la Práctica Clínica
+
+Sin embargo, los estudios contemporáneos resaltan limitaciones sustanciales en la práctica rutinaria. En adultos mayores asintomáticos en atención primaria, la auscultación realizada por médicos generales experimentados mostró una baja sensibilidad (32-44%) para la detección de enfermedades valvulares cardíacas recién detectadas, lo que la convierte en una herramienta de detección independiente deficiente, especialmente en pacientes con sobrepeso (Gardezi et al., 2018).
+
+La evidencia de revisiones sistemáticas muestra una gran variabilidad en la precisión diagnóstica y subraya que los médicos a menudo dependen en exceso de la auscultación a pesar de un rendimiento inconsistente y una disminución del énfasis en la formación (Davidsen et al., 2023). Estas realidades epidemiológicas y las brechas de rendimiento redefinen la importancia de mejorar la auscultación cardíaca en lugar de abandonarla.
+
+## Conclusión y Alcance del Trabajo
+
+Este trabajo expone las limitaciones críticas del entrenamiento puramente simulado y establece una prueba de concepto transparente para la adaptación, haciendo hincapié en que el despliegue clínico requiere fundamentalmente un ajuste fino futuro en cohortes humanas patológicas. (Se menciona una degradación del puntaje F1-macro simulado al 69.9%).
+
+## Introducción y Contexto de la Fonocardiografía
+
+Los métodos de enseñanza, los estetoscopios digitales y electrónicos, y la fonocardiografía habilitada por IA multimodal y telesalud tienen como objetivo mejorar la calidad de la señal y la interpretación, lo que permite que, incluso con recursos fundamentalmente de bajo costo y habilidades limitadas, se contribuya de manera más efectiva al diagnóstico temprano de enfermedades cardiovasculares (ECV) y a la reducción de la carga cardiovascular global (Barrett et al., 2017).
+
+## Limitaciones de los Métodos Actuales en el Diagnóstico de FCG
+
+Aunque el aprendizaje profundo ha prometido transformar el fonocardiograma (PCG) de un arte clínico subjetivo a una ciencia de datos objetiva, la transición de los prototipos de laboratorio al punto de atención se ve fundamentalmente obstaculizada por dos fallas interconectadas: la fragilidad algorítmica bajo ruido no estacionario y una grave brecha de dominio de simulación a la realidad (*sim-to-real*).
+
+La literatura contemporánea revela un persistente "techo de 5 clases" en la auscultación automatizada. A pesar de lograr una alta precisión, las arquitecturas de vanguardia se restringen frecuentemente a identificar categorías amplias —típicamente Estenosis Aórtica, Regurgitación Mitral, Estenosis Mitral y Prolapso de la Válvula Mitral—, fallando en resolver el complejo espectro hemodinámico requerido para la utilidad clínica (Fang et al., 2025; Wang et al., 2026; Sarker et al., 2025).
+
+Además, los modelos entrenados con condiciones de ruido estáticas o idealizadas fallan inherentemente cuando se exponen a la interferencia ambiental hospitalaria (Wang et al., 2025; Ali et al., 2023). Más críticamente, más allá del ruido aditivo, el campo pasa por alto en gran medida los cambios estructurales de la morfología espectral causados por la acústica torácica humana, lo que representa una brecha física no lineal que los algoritmos puramente simulados no pueden salvar.
+
+## Marco Propuesto y Metodología
+
+Para desacoplar y abordar sistemáticamente estas limitaciones, este estudio presenta un marco de prueba de concepto *in silico* diseñado para investigar mecanismos de adaptación para la clasificación de alta granularidad de 33 sonidos cardíacos distintos.
+
+Proponemos una arquitectura unificada ResNet18-MLP (11.5 millones de parámetros) diseñada deliberadamente con un doble propósito:
+1. Un *backbone* residual convolucional rígido, diseñado para extraer características invariantes al ruido.
+2. Un *Multi-Layer Perceptron* (MLP) de cabeza densa de 280K parámetros, para proporcionar la plasticidad paramétrica necesaria para la adaptación de dominio subsiguiente.
+
+**Fase 1: Establecimiento de la Línea Base Estructural**
+Se establece una línea base robusta utilizando 2,010 muestras de un maniquí de auscultación de alta fidelidad. Al optimizar el *backbone* desde cero en espectrogramas Mel bajo aumentación de ruido hospitalario dinámico extremo ($\mathcal{N}(-5, 5)$ dB SNR), nuestro marco supera el límite de 5 clases, logrando una puntuación F1 promedio de validación de $\approx 0.813$ y una puntuación F1-macro de prueba SAM independiente del 73.6%.
+
+**Hipótesis:** Se plantea que el entrenamiento puramente basado en maniquíes —aunque estadísticamente necesario para capturar perfiles de sonido patológico raros sin una masiva recopilación de datos clínicos— inevitablemente falla al interactuar con la fisiología humana real.
+
+**Fase 2: Cuantificación del Desplazamiento de Dominio**
+Se cuantifica explícitamente este desplazamiento de dominio estructural implementando el modelo de la Fase 1 en modo *zero-shot* con grabaciones de smartphone del mundo real de sujetos humanos sanos, donde su precisión colapsa al 15.7%. Posteriormente, se demuestra una estrategia de adaptación de dominio eficiente en parámetros mediante la... (el texto se interrumpe).
+
+Al realizar un ajuste fino (congelando la columna vertebral y actualizando solo la cabeza MLP densa). Al abordar tanto la granularidad taxonómica en la simulación como las realidades matemáticas de la adaptación a dominios humanos objetivo, este marco establece un plano transparente para la IA acústica fuera del dispositivo. En última instancia, nuestro objetivo es exponer la mecánica de la transferencia de simulación a la realidad, advirtiendo explícitamente que el despliegue clínico verdadero sigue siendo imposible hasta que estas vías de adaptación se hayan ajustado rigurosamente en cohortes humanas diversas y patológicas.
+
+## Trabajo Relacionado
+
+### Cuellos de Botella Arquitectónicos en la Clasificación Multiclase
+
+Como se ha establecido, expandir la taxonomía diagnóstica más allá de los paradigmas binarios o de clases limitadas introduce un grave enredo de características. Los modelos de vanguardia intentan gestionar esto escalando la complejidad arquitectónica, a menudo a costa de la aplicabilidad clínica. Por ejemplo, aunque Fang et al. (2025) lograron una precisión del 95.6%, su enfoque se basa en complejas características de acoplamiento multicanal y sincronización de ECG, lo que hace que el método sea poco práctico para estetoscopios digitales de canal único. De manera similar, Wang et al. (2026) utilizaron Redes de Atención Dual Inyectada de Ruido (INDANet) para alcanzar una alta precisión, pero su canalización de extracción de características sigue estando estrictamente optimizada para categorías estándar, sin lograr separar soplos continuos y sutiles superpuestos.
+
+Los esfuerzos por expandir los horizontes diagnósticos se han basado frecuentemente en arquitecturas computacionalmente prohibitivas. Sarker et al. (2025) propusieron un Conjunto de Ensamblaje Basado en Rango Difuso que integra VGG, EfficientNet y DenseNet para gestionar superposiciones de múltiples enfermedades, mientras que Cheng y Sun (2023) implementaron CAFusionNet, combinando ramas paralelas CNN y Transformer. Aunque son efectivos, estas arquitecturas pesadas (Li et al., 2025; Cheng y Sun, 2023) y las canalizaciones basadas en MFCC (Hosseinzadeh et al., 2024; Hasan y Karim, 2025) resaltan una brecha técnica crítica. Fundamentalmente, cuestionamos la tendencia actual de recurrir por defecto a Transformers masivos o modelos de conjunto complejos. En cambio, argumentamos que el aprendizaje residual estándar (por ejemplo, ResNet) ha sido severamente subestimado para señales espectrales 2D (espectrogramas); cuando se combina con la estrategia correcta de aumento de datos, las conexiones residuales proporcionan la capacidad geométrica necesaria para una separación de alta granularidad sin la prohibitiva sobrecarga computacional.
+
+### Robustez Extrema al Ruido (<5dB SNR)
+
+Los entornos clínicos se caracterizan por interferencias acústicas caóticas, que a menudo superan la amplitud de la señal cardíaca misma. Estudios recientes confirman que la eliminación de ruido estándar falla cuando la Relación Señal-Ruido (SNR) se acerca a 0 dB. Wang et al. (2025) demostraron que fue necesario un Autoencoder de Atención Multi-Cabeza de Desplazamiento de Características (Feature-Shuffle Multi-Head Attention Autoencoder) para reconstruir señales a -6 dB SNR, un hallazgo corroborado por la arquitectura LU-Net, que utilizó el seguimiento espectral basado en LSTM para sobrevivir al ruido ambiental hospitalario (Ali et al., 2023).
+
+## Pruebas en Límites Extremos y Arquitecturas Híbridas
+
+La prueba en límites extremos está respaldada por el trabajo sobre Descomposición de Frontera en Espacio de Fases (PSBD) en ruido rosa a 0 dB (Hu et al., 2025) y las métricas de identificación de fronteras propuestas por Torre-Cruz et al. (2022). Las arquitecturas híbridas, como las U-Nets codificadas por permutación (Aldelemy et al., 2025) y los autoencoders de desruidización basados en atención (Wang et al., 2024), confirman que los modelos de aprendizaje profundo deben condicionarse activamente para ignorar los artefactos de trayecto múltiple (Zhang et al., 2019). Nuestra estrategia de aumento dinámico de ruido, utilizando un rango continuo de $\mathcal{B}(-5, 5)\text{dB}$, se alinea directamente con este riguroso estándar, demostrando que las arquitecturas residual robustas pueden superar el enmascaramiento severo sin módulos de desruidización especializados.
+
+## Transferencia Sim-a-Real: El Paradigma del Maniquí
+
+La dependencia de datos sintéticos o simulados es una metodología polémica, pero cada vez más validada. Torabi et al. (2025) alteraron fundamentalmente este panorama con el conjunto de datos HLS-CMDS, demostrando que las grabaciones del maniquí SAM 3G® capturan la atenuación acústica espacial necesaria para un entrenamiento robusto. Helyer et al. (2024) y catálogos industriales (SEM Trainers, 2026) documentan además la capacidad del SAM 3G® para reproducir más de 25 sonidos patológicos distintos con alta fidelidad fisiológica. La investigación de Tsai et al. (2020) entrenó con éxito autoencoders profundos para la separación de fuentes ciega exclusivamente con datos de maniquíes, mientras que investigaciones recientes sobre Modelos Multimodales de Lenguaje Grandes Generativos (GLLMMs) confirman que los Maniquíes de Alta Fidelidad (HFMs) proporcionan suficiente "puesta en contexto" para la generalización de la IA (Hamilton et al., 2024). Si bien estudios recientes sobre cambios de dominio sugieren que estos sustitutos de alta fidelidad proporcionan preentrenamiento de características esencial (Torabi, 2026), nuestros hallazgos empíricos revelan que la transición desde esta línea base simulada hasta sensores de smartphone del mundo real no calibrados introduce inevitablemente una grave brecha de dominio acústico, lo que requiere estrategias de adaptación dirigidas.
+
+## IA en el Borde y Despliegue Móvil
+
+La democratización del cribado cardíaco requiere eficiencia algorítmica. Zhao et al. (2023) demostraron la viabilidad de la detección de Estenosis Aórtica severa basada en smartphone utilizando CNN ligeras con Mapas de Activación de Clase basados en Gradiente (Grad-CAM). Sin embargo, desplegar clasificadores complejos en hardware con recursos limitados sigue siendo un desafío. Safdar et al. (2025) abordaron esto con SET-MobileNet, logrando tiempos de inferencia de 120 ms en microcontroladores, mientras que TYNet (Zhang et al., 2025) utilizó la poda agresiva de parámetros para sensores embebidos. Las optimizaciones arquitectónicas modernas, como las capas Fused-MBConv en adaptaciones de EfficientNetV2B0 (Alrabie y Barnawi, 2025) y las convoluciones separables en profundidad de Lightx3 (Baig et al., 2025), ilustran la compensación entre precisión y FLOPs. Si bien la poda extrema de parámetros es una tendencia popular, defendemos firmemente que nuestras arquitecturas evaluadas —que van desde CNN personalizadas de 6.5M parámetros hasta los 11.2M parámetros de nuestro ResNet18 modificado— ocupan un máximo de aproximadamente 42.7 MB en memoria. Esta huella sigue siendo altamente...
+
+## Viabilidad y Profundidad Representacional del Modelo
+
+El modelo es viable para una inferencia fuera de línea real en cualquier smartphone moderno, manteniendo el argumento central de la salud móvil accesible sin sacrificar la profundidad representacional requerida para una taxonomía de 33 clases o la plasticidad de adaptación de dominio.
+
+## Complejidad Hemodinámica: PCA, HP y Separación S2
+
+Detectar sutiles anomalías hemodinámicas representa la cúspide del diagnóstico acústico.
+
+*   **Hipertensión Pulmonar (HP):** Caracterizada por un P2 acentuado. Recientemente, se ha cribado con un AUROC de 0.79 por Guo et al. (2025).
+*   **Persistencia del Conducto Arterioso (PCA):** Sigue siendo un desafío volátil. Una revisión sistemática de 2026 (Long et al., 2026) expuso que los algoritmos actuales de PCA sufren de sobreajuste (overfitting) y carecen de validación externa, a pesar de que intentos anteriores de conjuntos (ensemble) lograron un éxito moderado (Gómez-Quintana et al., 2021).
+*   **Separación S2:** La resolución temporal requerida para identificar los sonidos de Separación S2 ha impulsado el cambio de algoritmos manuales de deschirpado (Xu et al., 2000) a clasificadores de aprendizaje profundo de extremo a extremo, capaces de resolver separaciones espectrales a escala de milisegundos (Jani et al., 2021).
+
+El modelo desarrollado marca un avance decisivo sobre los paradigmas actuales de "Normal vs. Anormal" al ser capaz de clasificar estas 33 granularidades distintas. Además, enfoques de aprendizaje entre dominios, como el PH-ELM (Gaudio et al., 2025), respaldan la viabilidad de transferir características acústicas aprendidas a sujetos humanos.
+
+## Desplazamiento de Dominio Acústico y Adaptación Paramétricamente Eficiente
+
+Aunque los simuladores de alta fidelidad proporcionan la amplitud taxonómica esencial para modelar patologías raras, el despliegue de estos modelos en pacientes biológicos introduce inevitablemente un grave desplazamiento de dominio acústico. Las variaciones en la atenuación del tejido, la anatomía torácica y el acoplamiento de sensores no calibrados (p. ej., micrófonos de smartphone) alteran drásticamente la morfología espectral de las señales cardíacas en el mundo real.
+
+Estudios recientes han cuantificado rigurosamente esta brecha sim-a-real en los dominios acústico y audiovisual, demostrando cómo la variabilidad del mundo físico degrada severamente la generalización de los modelos entrenados únicamente con representaciones simuladas (Guajardo-Herrera et al., 2025; Chen et al., 2024).
+
+En la clasificación de audio y el procesamiento de señales biomédicas, cerrar esta brecha a menudo depende de los paradigmas de Adaptación de Dominio y Aprendizaje por Transferencia. Sin embargo, surge un desafío crítico al adaptar modelos a cohortes clínicas pequeñas: el ajuste fino extenso en conjuntos de datos limitados del mundo real conlleva el riesgo de olvido catastrófico de las anomalías estructurales complejas y de bajo soporte aprendidas durante el preentrenamiento (Yi et al., 2023).
+
+Para mitigar esto, han surgido estrategias de adaptación paramétricamente eficiente: congelar los extractores de características convolucionales profundas y actualizar exclusivamente la cabeza de clasificación. Este método ha emergido como una forma teóricamente fundamentada de recalibrar los límites de decisión para dominios objetivo sin destruir el conocimiento subyacente.
+
+## Consideraciones Metodológicas para la Traducción Sim-a-Real
+
+En el contexto específico del análisis clínico de audio y sonidos cardíacos, la adaptación solo de la cabeza (*head-only adaptation*) ha demostrado ser empíricamente superior al ajuste fino completo (*full fine-tuning*) para prevenir el sobreajuste (*overfitting*) en distribuciones objetivo de bajos recursos (Biermann et al., 2025). Al cuantificar explícitamente la degradación en el escenario cero (*zero-shot degradation*) en sujetos humanos y emplear un estricto protocolo de ajuste fino solo de la cabeza con exclusión de sujeto (*Leave-One-Subject-Out*, LOSO), nuestro marco aborda directamente este cuello de botella sim-a-real, estableciendo una vía práctica para la traducción clínica.
+
+## Métodos
+
+### Adquisición y Taxonomía del Dataset Simulado
+
+Para establecer una línea base de preentrenamiento robusta y superar las limitaciones de granularidad de los datasets públicos, generamos un dataset simulado personalizado utilizando el maniquí de auscultación SAM 3G® Student. Este simulador de alta fidelidad proporciona reproducciones acústicamente precisas de 33 condiciones cardíacas distintas, incluidas patologías valvulares raras que a menudo están ausentes en los datasets clínicos.
+
+El audio fue capturado utilizando un smartphone Samsung Galaxy A54 posicionado directamente en el foco de auscultación mitral del maniquí (quinto espacio intercostal, línea medioclavicular). Para inducir naturalmente la varianza espacial y simular las inconsistencias de colocación del mundo real, el smartphone fue removido y reposicionado manualmente para cada sesión de grabación de 10 segundos. Esta colocación anatómica específica se seleccionó para maximizar la energía acústica y la retroalimentación táctil de los sonidos cardíacos fundamentales S1 y S2, simulando una adquisición realista con estetoscopio digital en un entorno de atención primaria con recursos limitados.
+
+Las grabaciones fueron digitalizadas con una tasa de muestreo de 22 kHz y posteriormente submuestradas a 6 kHz para reducir la sobrecarga computacional. El dataset final de la Fase 1 comprende 2,010 muestras a través de 33 clases.
+
+### Preprocesamiento de Señales y Pipeline de Aumento Universal
+
+Para garantizar una extracción de características robusta y estandarizar estrictamente la interfaz acústica entre los datos simulados del maniquí y las subsiguientes grabaciones humanas del mundo real, todos los datos acústicos fueron procesados a través de un estricto pipeline secuencial antes de la ingesta de la red.
+
+1.  **Resampling:** Primero, las señales de audio sin procesar fueron remuestreadas a una tasa objetivo uniforme de 6 kHz para prevenir el aliasing mientras se preserva el límite de Nyquist para todas las frecuencias cardíacas diagnósticas. Sea $x(t)$ esta señal de audio remuestreada, la cual se visualiza como una forma de onda y un espectrograma Mel en la Figura 1a.
+2.  **Interferencia Acústica:** Durante las fases de entrenamiento, la interferencia acústica física se simuló en el dominio del tiempo mediante la combinación lineal de la señal limpia con fragmentos aleatorios de ruido ambiental hospitalario (que contienen parloteo, alarmas y sonidos mecánicos).
+3.  **Control de Ruido:** Para evitar el sobreajuste a una amplitud de ruido única y forzar al modelo a extraer características robustas a través de un amplio continuo de interferencia acústica, la mezcla fue controlada por una Relación Señal-Ruido (SNR) dinámica muestreada de una distribución uniforme $U(-5, 5)$ dB.
+
+La SNR general se define en decibelios como:
+$$\text{SNR}_{\text{dB}} = 10 \log_{10} \left( \frac{P_{\text{signal}}}{P_{\text{noise}}} \right)$$
+
+## Procesamiento de Señales y Generación del Espectrograma Mel
+
+La señal combinada se define como $x_{noisy}(t)$, donde $P_{signal}$ y $P_{noise}$ representan la potencia promedio de la señal de audio limpia y del fragmento de ruido, respectivamente.
+
+Para estabilizar las fluctuaciones de energía de la señal después de la inyección de ruido, se aplicó la normalización estándar Z-score a la forma de onda resultante:
+$$x_{norm}(t) = \frac{x_{noisy}(t) - \mu}{\sigma} \quad (2)$$
+donde $\mu$ y $\sigma$ son la media y la desviación estándar de la amplitud de la señal.
+
+A continuación, la señal de dominio tiempo normalizada se transformó al dominio tiempo-frecuencia utilizando un Mel-espectrograma. Esto mapea la escala de frecuencia lineal a la escala Mel no lineal para aproximar la percepción auditiva humana:
+$$S_{mel}(f, t) = \log(M \cdot |STFT(x_{norm}(t))|^2) \quad (3)$$
+donde $M$ es la matriz del filtro Mel que comprende 128 bandas, y $STFT$ denota la Transformada de Fourier de Tiempo Corto calculada con una ventana Hanning de longitud 2048 y longitud de salto (hop length) de 512.
+
+## Preprocesamiento y Reducción de Dimensionalidad
+
+Dado que la energía acústica cardíaca patológica se concentra predominantemente en frecuencias bajas (<1 kHz), se aplicó un recorte de frecuencia determinístico a los espectrogramas generados, reteniendo solo los 40 bins Mel inferiores. Este recorte espacial, visible en el panel (b) de la Figura 1, actúa como un filtro paso bajo duro contra artefactos ambientales de alta frecuencia y reduce sustancialmente la dimensionalidad del espacio de características.
+
+Finalmente, en lugar del escalado min-max estándar, los tensores de espectrograma Mel recortados se sometieron a un escalado estándar por muestra (normalización Z-score). Esta estandarización independiente garantiza que cada espectrograma 2D individual posea una media de 0 y una varianza de 1. En el contexto del procesamiento acústico, este enfoque por muestra es crítico: neutraliza eficazmente cualquier variación residual en el volumen de grabación o la distancia del micrófono sin depender de estadísticas a nivel poblacional, previniendo así estrictamente la fuga de datos entre las particiones de entrenamiento y prueba antes de la extracción de características convolucionales.
+
+## Figura 1: Contexto Experimental
+
+**Figura 1: Forma de onda en el dominio del tiempo y el correspondiente Mel-espectrograma de un sonido cardíaco de cuarta patología grabado desde el maniquí SAM 3G® mediante un estetoscopio digital ($f_s = 6 \text{kHz}$).**
+
+Los espectrogramas visualizan la escala Mel de 128 bandas, con un marcador rojo que indica el recorte de 40 bins utilizado para la entrada de la red. El Panel (a) muestra la señal de alta fidelidad limpia. El Panel (b) muestra el resultado de inyectar ruido ambiental hospitalario en una condición de SNR de -5 dB (representando el límite inferior de nuestro rango de entrenamiento dinámico de $\text{SNR} \in [-5, 5] \text{ dB}$), lo que demuestra un enmascaramiento espectral severo de las características continuas, mientras que los pulsos rítmicos primarios S1/S2 permanecen discernibles.
+
+## 3.3. Aumento de Ruido Extremo Dinámico
+
+(Este encabezado introduce la sección de aumento de datos, que se centra en estrategias más allá de los rangos SNR benignos estándar, como 5–15 dB).
+
+## Metodología de Entrenamiento con Ruido Dinámico
+
+Para superar los umbrales estáticos, sometimos nuestro *pipeline* de preentrenamiento de Fase 1 a una distribución de ruido dinámico extremo y continuo: $\text{SNR}_{\text{train}} \sim U(-5, 5)\text{dB}$ (4).
+
+Mientras que las tareas de clasificación binaria (Normal vs. Anormal) pueden sobrevivir a entornos aislados de -6 dB de SNR (Wang et al., 2025), la resolución de 33 clases distintas, particularmente aquellas definidas por sutiles murmullos continuos de tipo *Patent Ductus Arteriosus* (PDA), se encuentra con un severo enmascaramiento acústico.
+
+Clínicamente, el ruido ambiental hospitalario es profundamente estocástico; fijar un límite de ruido estático induce matemáticamente un sobreajuste a una única amplitud de interferencia. Al entrenar a través de una distribución uniforme que varía desde +5 dB hasta un extremo de -5 dB, el modelo se ve forzado a aprender la verdadera distribución continua del ruido hospitalario. Este enfoque matemático evita que los filtros convolucionales simplemente memoricen un piso de ruido específico, optimizando las conexiones residuales para aislar dinámicamente anomalías cardíacas estructurales, independientemente de la intensidad ambiental aditiva.
+
+## Limitaciones y Brecha Sim-a-Real
+
+Es crucial reconocer la limitación fundamental de esta estrategia de aumento aditivo. Aunque el ruido de $\text{SNR} \in [-5, 5]\text{dB}$ simula perfectamente la interferencia ambiental hospitalaria, es una superposición estrictamente lineal. No logra capturar los artefactos de acoplamiento de piel no lineales, las alteraciones de resonancia torácica ni la atenuación tisular espacial inherentes a los pacientes humanos.
+
+Esta varianza física no modelada constituye el núcleo de la "brecha sim-a-real" (*sim-to-real gap*), lo que exige el protocolo de adaptación de dominio de Fase 2.
+
+## Evidencia Acústica y Resultados
+
+**Figura 2: Degradación acústica de un murmullo continuo (Ductus Arteriosus Patentus) bajo aumento progresivo de ruido hospitalario.**
+Se visualiza con una escala de potencia fija (dB) para demostrar el enmascaramiento relativo. En la señal limpia (a), la textura patológica continua entre los pulsos S1/S2 está claramente aislada. En 5 dB (b), que representa el límite superior de nuestro aumento de ruido ($\text{P}_{\text{señal}} > \text{P}_{\text{ruido}}$), el murmullo continuo de alta frecuencia está parcialmente enmascarado, pero conserva contornos estructurales claros. En el límite inferior extremo de nuestra distribución de entrenamiento dinámico (-5 dB) (c), la textura patológica está completamente obliterada.
+
+**Figura 3: Morfología espectral estructural de grabaciones humanas vs. datos simulados aumentados con ruido.**
+La morfología espectral estructural de las grabaciones humanas difiere drásticamente de los datos simulados aumentados con ruido.
+
+**Tabla de Referencia (Sim-to-Real):**
+*   (a) Señal Limpia
+*   (b) 5 dB SNR (Límite Superior de la Distribución de Entrenamiento)
+*   (c) -5 dB SNR (Límite Inferior Extremo)
+
+## Robustez del Entrenamiento y Representaciones Invariantes al Ruido
+
+El entrenamiento a lo largo de todo este continuo ($\Omega(-5,5)$dB) previene el sobreajuste de amplitud y obliga a la red a aprender representaciones robustas e invariantes al ruido, dejando solo los picos rítmicos primarios por debajo de la interferencia ambiental.
+
+## Comparación Simulación vs. Realidad (Sim-to-Real)
+
+A pesar del ruido aditivo intenso en la simulación, la morfología estructural —específicamente la dispersión de frecuencia de $S_1/S_2$ y la resonancia armónica inter-latidos— difiere significativamente de la firma acústica humana del mundo real. Esto confirma que el ruido ambiental simulado no puede actuar como un sustituto (proxy) del cambio de dominio estructural causado por el tejido humano.
+
+## Diseño de la Arquitectura Unificada (ResNet18-MLP)
+
+Para resolver los requisitos contradictorios de resiliencia extrema al ruido y adaptabilidad entre dominios, el motor de clasificación principal que sustenta nuestro marco es una arquitectura ResNet18-MLP unificada y adaptada (He et al., 2016).
+
+Este modelo, que comprende aproximadamente 11.5 millones de parámetros, fue diseñado deliberadamente para desacoplar la extracción de características de la adaptación de dominio mediante una estrategia estructural de dos partes:
+
+**1. Backbone Residual (Extracción de Características):**
+*   Utiliza conexiones residuales clásicas para mantener el flujo de gradiente y la representación de características bajo enmascaramiento acústico dinámico extremo.
+*   Aunque originalmente diseñado para tareas visuales de 3 canales, adaptamos específicamente el tronco de entrada de la red para procesar tensores Mel-espectrograma de 2D y canal único.
+*   Crucialmente, para evitar un submuestreo espacial prematuro que destruiría la resolución de frecuencia de grano fino de nuestra toma Mel de 40 bandas, el paso (stride) de la convolución inicial se redujo de 2 a 1, y la capa estándar de máximo *pooling* subsiguiente fue completamente omitida utilizando un mapeo de identidad.
+
+**2. Cabeza MLP Densa (Adaptación de Dominio):**
+*   En lugar de emplear la capa de clasificación lineal única estándar típica de las arquitecturas ResNet, reemplazamos el término de la red con una cabeza de Perceptrón Multicapa (MLP) densa que comprende aproximadamente 280,000 parámetros entrenables.
+*   Esta modificación arquitectónica específica fue diseñada explícitamente para la Fase 2: mientras que el *backbone* residual profundo proporciona la rigidez geométrica necesaria para extraer características estructurales bajo el ruido de la Fase 1, la cabeza MLP densa proporciona la "plasticidad paramétrica" requerida para recalibrar los límites de decisión y absorber los cambios de dominio estructural durante el ajuste fino posterior solo en la cabeza.
+
+**Evaluación Comparativa:**
+Para evaluar esta elección arquitectónica frente a las tendencias actuales de despliegue en el borde (*edge-deployment*), el *backbone* ResNet18 fue evaluado junto con arquitecturas ligeras establecidas (MobileNetV2 (Sandler et al., 2018) y EfficientNetV2 (Tan y Le, 2021)) bajo una estricta comparación por pares de dos paradigmas de inicialización:
+1.  Aprendizaje por Transferencia (*Transfer Learning*) utilizando pesos preentrenados estándar de ImageNet.
+2.  Inicialización estrictamente desde cero (*from scratch*).
+
+## Fase 1: Protocolo de Preentrenamiento y Estrategia de Validación
+
+Para prevenir rigurosamente la fuga de datos y establecer una línea base robusta para la Fase 1, el conjunto de datos simulado de 2,010 muestras fue particionado utilizando una división estricta por sesión, en lugar de una división temporal aleatoria. De manera crucial, el conjunto de prueba independiente (N= 401) se construyó exclusivamente a partir de sesiones de grabación físicamente independientes capturadas en días separados. Dado que el sensor de smartphone fue reprocionado manualmente entre cada captura, el conjunto de prueba evalúa inherentemente la resiliencia del modelo a la atenuación espacial sutil y a los cambios de acoplamiento del sensor, garantizando que la red aprenda firmas acústicas patológicas generalizadas en lugar de memorizar el ruido ambiental continuo de una única grabación prolongada.
+
+La selección del modelo y el ajuste de hiperparámetros de la Fase 1 se llevaron a cabo mediante una estrategia de Validación Cruzada Estratificada de 5 pliegues en el subconjunto de entrenamiento simulado, garantizando una representación proporcional de la clase en todas las divisiones de datos.
+
+**Hipótesis de Inicialización:**
+Un hipótesis crítica probada en nuestro protocolo fue la eficacia de los paradigmas de inicialización bajo estrés acústico extremo. Si bien el aprendizaje por transferencia es una práctica estándar, hipotetizamos que entrenar completamente desde cero produciría resultados superiores. Para tareas acústicas sujetas a ruido ambiental dinámico, descartar los pesos preentrenados visuales fuerza a los filtros convolucionales a optimizar exclusivamente para morfologías espectrales complejas y ritmos temporales continuos, en lugar de depender de detectores de bordes geométricos que pueden fallar bajo fuerte enmascaramiento acústico.
+
+**Optimización de Hiperparámetros:**
+Para garantizar una comparación estrictamente justa y acomodar estas distintas estrategias de inicialización, los hiperparámetros de optimización fueron cuidadosamente adaptados:
+
+*   **Modelos entrenados desde cero:** Se optimizaron utilizando el optimizador Adam con una tasa de aprendizaje inicial de $1 \times 10^{-3}$, una decadencia de peso $L_2$ de $1 \times 10^{-2}$, y un factor de reducción de LR en meseta de 0.8.
+*   **Configuraciones de aprendizaje por transferencia:** Para prevenir el olvido catastrófico de las representaciones visuales preentrenadas, se utilizó una tasa de aprendizaje más conservadora de $1 \times 10^{-4}$, una decadencia de peso de $1 \times 10^{-3}$, y un factor de reducción de 0.5.
+
+Todas las arquitecturas emplearon una función de pérdida de Entropía Cruzada ponderada por clase para mitigar directamente el desequilibrio de clases inherente del conjunto de datos. El entrenamiento se limitó a 1000 épocas con un tamaño de lote de 32, restringido por un *callback* de Detención Temprana (Early Stopping) que monitoreó la pérdida de validación con una paciencia de 20 épocas. Finalmente, los pesos óptimos para cada pliegue fueron seleccionados explícitamente monitoreando la puntuación macro F1 máxima, asegurando que los modelos evaluados fueran altamente resistentes a las clases minoritarias en lugar de simplemente minimizar la pérdida global.
+
+## Fase 2: Protocolo de Adaptación de Dominio Sim-a-Real
+
+Para abordar explícitamente la brecha de dominio estructural identificada al implementar los modelos de la Fase 1 en el mundo real, diseñamos un protocolo de Adaptación de Dominio de prueba de concepto utilizando grabaciones humanas. Nuestro grupo de adaptación clínica comprendió 11 grabaciones independientes de smartphones recolectadas de 7 sujetos humanos (5 mujeres, 2 hombres).
+
+## Adaptación a Escenarios del Mundo Real y Estrategia de Ajuste Fino
+
+Para evaluar rigurosamente la robustez del modelo frente a la varianza fisiológica del mundo real, la cohorte incluyó sujetos con condiciones preexistentes (obesidad, hipertensión arterial manejada médicamente y artritis) junto con líneas base saludables. Todo el audio del mundo real fue segmentado y procesado utilizando el *pipeline* de preprocesamiento universal establecido en la Sección 3.2.
+
+Dada el tamaño severamente limitado de esta distribución objetivo del mundo real, el ajuste fino completo de la red inevitablemente resultaría en un masivo olvido catastrófico de la taxonomía simulada de 33 clases. Por lo tanto, empleamos una estrategia de ajuste fino eficiente en parámetros, limitada únicamente a la cabeza de clasificación, aprovechando nuestra arquitectura unificada.
+
+La columna vertebral residual profunda de ResNet18-MLP (optimizada en la Fase 1 para extraer morfologías espectrales invariantes al ruido) fue estrictamente congelada. Solo la cabeza de clasificación MLP densa de 280,000 parámetros fue actualizada. Esto aísla la plasticidad paramétrica, permitiendo que el modelo recalibre sus límites de decisión para la atenuación del tejido humano sin sobrescribir los extractores de características geométricas centrales.
+
+El conjunto de datos de adaptación combinó fragmentos humanos del mundo real con un subconjunto proporcionalmente equilibrado de los datos de entrenamiento simulados originales. Dado que la cohorte humana consistió en ritmos fisiológicos saludables, todos los fragmentos humanos del mundo real recibieron la etiqueta objetivo "Normal 75BPM". Reconocemos explícitamente que entrenar una cabeza MLP flexible exclusivamente hacia una única clase objetivo conlleva intrínsecamente el riesgo de una expansión matemática del límite de decisión "Normal", un fenómeno cuantificado en nuestros resultados de la Fase 2.
+
+## Protocolo de Validación y Optimización
+
+Para prevenir estrictamente la fuga de datos a nivel de sujeto, la validación se llevó a cabo utilizando un esquema de validación cruzada de Dejar-Uno-Sujeto-Fuera (LOSO) de 7 pliegues. En cada pliegue, todas las grabaciones de un único sujeto se reservaron para la evaluación, mientras que los 6 sujetos restantes se utilizaron para el ajuste fino. Los modelos se reinicializaron explícitamente desde sus puntos de control preentrenados originales de la Fase 1 al comienzo de cada pliegue para evitar la fuga progresiva de pesos.
+
+La optimización utilizó el optimizador Adam (tasa de aprendizaje $1 \times 10^{-4}$, decadencia de peso $1 \times 10^{-4}$) y la pérdida de Entropía Cruzada no ponderada durante 15 épocas, modulada por un programador de Descenso de Ángulo Coseno (*Cosine Annealing*). Después de validar la generalización mediante LOSO, se exportó un modelo final de prueba de concepto entrenando con la cohorte completa de 7 sujetos.
+
+## Resultados
+
+### 4.1. Fase 1: Rendimiento de Clasificación Simulada
+
+Para garantizar un rigor metodológico estricto y prevenir la fuga de datos, el conjunto de datos simulado se particionó utilizando una división estricta por grabación. Esto garantiza que los segmentos acústicos temporales originados de la misma grabación continua de maniquí no se compartan entre los subconjuntos de entrenamiento y prueba. Esta metodología logró aislar un conjunto de prueba independiente de 401 muestras (aproximadamente el 20% del corpus) estrictamente para la evaluación final de la Fase 1. Evaluado bajo la condición de ruido dinámico extremo ($\text{SNR}(-5, 5)\text{dB}$), la arquitectura unificada ResNet18-MLP demostró una extracción de características altamente estable.
+
+## Evaluación del Rendimiento y Generalización
+
+Durante la Validación Cruzada Estratificada de 5 pliegues en el subconjunto de entrenamiento, el modelo alcanzó una puntuación F1 promedio de validación de ∼0.813. Al desplegarse en el conjunto de prueba independiente y completamente no visto, el modelo mantuvo una puntuación F1 macro-promediada resiliente del 73.6%.
+
+Este rendimiento confirma que la columna vertebral residual profunda extrae con éxito firmas acústicas patológicas generalizadas en toda la taxonomía de 33 clases, en lugar de simplemente memorizar el nivel de ruido ambiental continuo o sobreajustarse a dominios acústicos específicos.
+
+Aunque el enmascaramiento extremo de $\xi(-5, 5)$ dB degrada inevitablemente la precisión determinística absoluta para soplos continuos altamente volátiles (como el *Patent Ductus Arteriosus*) que caen completamente por debajo del nivel de ruido subcero, la arquitectura funciona con éxito como una red de seguridad diagnóstica diferencial robusta. Las conexiones residuales preservan los contornos estructurales de estas complejas anomalías hemodinámicas dentro del horizonte diferencial inmediato (los *logits* de mayor probabilidad). Esto confirma empíricamente que incluso cuando la red tiene dificultades para aislar el diagnóstico primario absoluto bajo ruido ambiental severo, la anomalía estructural subyacente es capturada, estableciendo una línea base matemáticamente rigurosa e invariante al ruido antes de introducir cambios de dominio del mundo real.
+
+## Búsqueda Arquitectónica y Justificación de la Columna Vertebral
+
+Para justificar empíricamente los componentes estructurales de nuestra arquitectura unificada ResNet18-MLP, realizamos una evaluación de línea base preliminar contra un espacio experimental más amplio. Esta búsqueda evaluó arquitecturas establecidas optimizadas para dispositivos móviles (MobileNetV2 y EfficientNetV2) y una cuadrícula de CNN ligeras personalizadas bajo condiciones idénticas de ruido dinámico.
+
+La brecha de generalización entre estas arquitecturas exploratorias dentro del dominio simulado se captura visualmente en la Figura 4. Los gráficos de dispersión ilustran una compensación crítica entre el tamaño del modelo y la caída del rendimiento de validación a prueba bajo enmascaramiento severo. Si bien las CNN personalizadas (p. ej., 4CNN-1MLP) exhibieron un alto *recall* de validación —beneficiándose de la plasticidad paramétrica de sus cabezas MLP densas—, su caída vertical más pronunciada en el conjunto de prueba independiente indicó una grave vulnerabilidad a la distribución de ruido dinámico simulada. Por el contrario, la inclusión de ResNet18 preentrenado resalta la grave degradación del rendimiento causada por el Aprendizaje por Transferencia visual, justificando en última instancia la columna vertebral residual entrenada desde cero de nuestro modelo unificado.
+
+**Tabla 1 Métricas de rendimiento preliminares de las arquitecturas de línea base experimentales evaluadas bajo aumento de ruido dinámico.**
+
+| Arquitectura | Precisión Top-1 | Precisión Top-3 | F1 Macro | Parámetros | Tamaño (MB) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| EfficientNetV2-S (Desde Cero) | 36.16% | 64.94% | 35.71% | 20.2M | 77.0 |
+| MobileNetV2 (Desde Cero) | 49.63% | 65.07% | 40.94% | 2.3M | 8.6 |
+| ResNet18 (Preentrenado) | 56.31% | 77.07% | 48.53% | 11.2M | 42.7 |
+| CNN Personalizada 4-Bloque | 79.55% | 92.00% | 75.20% | 6.5M | 24.7 |
+| Columna Vertebral ResNet18 (Desde Cero) | 84.04% | 93.77% | 79.97% | 11.2M | 42.7 |
+
+## Diseño Arquitectónico y Fundamentos de Estabilidad
+
+Las arquitecturas que utilizan conexiones residuales profundas demostraron una estabilidad geométrica excepcional, manteniendo sus métricas de rendimiento al pasar a datos ruidosos no vistos. Este hallazgo fundamentó directamente nuestro diseño unificado: las CNN personalizadas demostraron que, si bien las cabezas de clasificación densas son altamente plásticas, requieren una columna vertebral convolucional profunda y rígida para extraer características invariantes al ruido. La fusión de estos conceptos resultó en nuestro ResNet18-MLP final.
+
+## Análisis Empírico y Comparación de Modelos
+
+Un hallazgo empírico crítico de esta comparación de referencia fue el fallo sistémico del Aprendizaje por Transferencia visual. Tal como se cuantificó en la Tabla 1, inicializar arquitecturas con pesos estándar de ImageNet degradó uniformemente el rendimiento al someterse a enmascaramiento acústico dinámico.
+
+**Desventajas de los Pre-entrenamientos Visuales:**
+
+*   **ResNet18:** Una ResNet18 estándar inicializada desde cero logró una precisión Top-1 del 84.04% en esta evaluación preliminar, mientras que su contraparte pre-entrenada colapsó a un 56.31% de precisión Top-1.
+*   Esta diferencia de rendimiento confirma que forzar los espectrogramas Mel 2D a través de filtros convolucionales previamente optimizados para la detección de bordes visuales de 3 canales es fundamentalmente contraproducente.
+*   Descartar los conocimientos previos visuales permite que la red optimice exclusivamente para ritmos temporales continuos y sutiles morfologías espectrales.
+
+**Limitaciones de la Eficiencia Visual:**
+
+*   Las arquitecturas convencionalmente optimizadas para la eficiencia visual experimentaron una degradación grave del rendimiento.
+*   MobileNetV2 arrojó una precisión Top-1 de solo 49.63%.
+*   EfficientNetV2 colapsó completamente a 36.16%.
+*   Esto proporciona evidencia empírica de que, si bien las convoluciones separables profundas son computacionalmente eficientes, carecen de la robustez representacional necesaria para aislar características espectrales cardíacas superpuestas de un ruido hospitalario de alta densidad.
+
+## Justificación del ResNet18-MLP
+
+La ResNet18 estándar, inicializada desde cero, proporcionó la rigidez topológica óptima para la extracción de ruido, lo que racionaliza estrictamente su selección como la columna vertebral para nuestro marco ResNet18-MLP finalizado de 11.5 millones de parámetros.
+
+## Resultados del Sistema (ResNet18-MLP)
+
+El marco demostró una notable tolerancia al fallo diagnóstico dentro del dominio simulado, capturando con éxito la patología subyacente verdadera dentro de sus predicciones Top-3 (100% de precisión Top-3). La resiliencia superior del aprendizaje residual justificó la selección de la columna vertebral ResNet para nuestra arquitectura unificada.
+
+## Robustez y Desempeño del Modelo Bajo Enmascaramiento Dinámico de Ruido
+
+De las 33 clases evaluadas, el modelo demostró un rendimiento significativo incluso bajo severo enmascaramiento de ruido dinámico ($\text{dB}(-5, 5)$). Los hallazgos clínicos notables de esta línea base de preentrenamiento incluyen:
+
+*   **Alta Robustez en Anomalías Estructurales:** Patologías estructurales y valvulares graves, como Pericarditis Aguda, Estenosis Mitral, Tetralogía de Fallot y Estenosis Aórtica Congénita, lograron una precisión Top-1 del 100%. Esto indica que sus firmas espectrales mantienen una integridad estructural resiliente que sobrevive fácilmente a enmascaramientos ambientales extremos sin revertir a un ritmo genérico.
+*   **Validación Top-3 Diferencial ("SafetyNet"):** La validación más convincente de la arquitectura residual surgió en clases acústicamente volátiles.
+    *   **Persistencia de la Arteria Ductus (PDA):** Un soplo continuo sutil, completamente obliterado por el ruido ambiental, registró una precisión Top-1 de 0.00% debido al enmascaramiento espectral total. Sin embargo, su precisión Top-3 aumentó al 66.67%.
+    *   **Regurgitación de Estenosis Aórtica:** Hemodinámicas complejas superpuestas mostraron un aumento de precisión de 60.00% (Top-1) a 100.00% (Top-3). Esto confirma que el modelo preserva con precisión estas condiciones elusivas como candidatos diferenciales de alta probabilidad, incluso cuando la predicción determinista absoluta falla bajo ruido severo.
+*   **Distinción Fisiológica:** El modelo aisló con éxito la División Fisiológica S2 con una alta precisión del 86.96%, distinguiéndola de divisiones patológicas (ej., Defectos Septales Auriculares), que sufrieron menor precisión debido a la superposición de ruido. Establecer esta capacidad en simulación es un requisito crítico para evitar falsos positivos y ansiedad innecesaria en la atención primaria y el cribado pediátrico.
+
+## Análisis de Errores y Limitaciones del Enmascaramiento Acústico
+
+Aunque la aumentación de ruido dinámico regularizó efectivamente la red a nivel global dentro del dominio simulado, un análisis del rendimiento por clase resalta las estrictas limitaciones físicas del enmascaramiento acústico.
+
+Como se detalla en nuestro análisis de errores, las anomalías hemodinámicas altamente sutiles o continuas sufrieron una degradación sustancial bajo la distribución de entrenamiento de $\text{dB}(-5, 5)$.
+
+*   **Fallos en Anomalías Continuas (PDA):** La Arteria Ductus (PDA), caracterizada por un soplo continuo tipo máquina, queda completamente envuelta por el ruido ambiental en límites de SNR más bajos, lo que provoca que la red la clasifique erróneamente como un ritmo base. Sin embargo, la arquitectura residual aún extrae características secundarias suficientes para impulsar la patología correcta a los resultados de mayor probabilidad, haciendo que la PDA pase de un recall Top-1 de 0.0000 a una precisión Top-3 de 0.6667.
+*   **Fallos en Anomalías de Alta Frecuencia (Hipertensión Pulmonar):** Las válvulas de cierre de alta frecuencia, como en la Hipertensión Pulmonar, sufren un enmascaramiento casi total bajo SNR subcero extremo (0.0000 Top-1, 0.1667 Top-3), forzando a la red a pasar casi por completo a un ritmo subyacente.
+
+Comprender estos modos de fallo simulados específicos —donde el enmascaramiento acústico severo fuerza a la red a pasar por defecto a un ritmo base 'Normal'— proporciona la línea base comparativa esencial para analizar los errores de desplazamiento de dominio recíprocos encontrados al implementar este modelo de forma *zero-shot* en sujetos humanos no calibrados.
+
+## Marco de Auscultación Cardíaca de 33 Clases de Simulación a la Realidad
+
+La Tabla 2 presenta las métricas detalladas de rendimiento por clase para la arquitectura ResNet18-MLP en el conjunto de prueba simulado independiente ($N=401$). Se presentan la Precisión, la Exhaustividad (Precisión Top-1), la Puntuación F1, y la Precisión Top-3. La "Ganancia Top-3" representa la mejora de precisión al considerar los tres logits de probabilidad más altos. Las clases están ordenadas de forma descendente por la Puntuación F1 para resaltar firmas espectrales robustas.
+
+**Tabla 2: Métricas de Rendimiento Detalladas por Clase (ResNet18-MLP)**
+
+| Clase | Soporte | Precisión | Exhaustividad (Top-1) | Puntuación F1 | Precisión Top-3 | Ganancia Top-3 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Pericarditis Aguda | 6 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | +0.0000 |
+| Insuficiencia Aórtica Aguda | 5 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | +0.0000 |
+| Estenosis Aórtica Congénita | 6 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | +0.0000 |
+| Estenosis y Regurgitación Mitral | 21 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | +0.0000 |
+| Normal 110 BPM | 20 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | +0.0000 |
+| Estenosis Pulmonar | 6 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | +0.0000 |
+| Tercer Sonido Cardíaco | 22 | 0.9565 | 1.0000 | 0.9778 | 1.0000 | +0.0000 |
+| Estenosis Mitral | 20 | 0.9524 | 1.0000 | 0.9756 | 1.0000 | +0.0000 |
+| Normal 90 BPM | 20 | 0.9524 | 1.0000 | 0.9756 | 1.0000 | +0.0000 |
+| Sonido de Sumación | 21 | 0.9091 | 0.9524 | 0.9302 | 0.9524 | +0.0000 |
+| Normal 60 BPM | 22 | 1.0000 | 0.8636 | 0.9268 | 0.9545 | +0.0909 |
+| Coartación Aórtica | 6 | 1.0000 | 0.8333 | 0.9091 | 0.8333 | +0.0000 |
+| Soplo Venoso | 6 | 1.0000 | 0.8333 | 0.9091 | 1.0000 | +0.1667 |
+| División Fisiológica S2 | 23 | 0.9091 | 0.8696 | 0.8889 | 0.9130 | +0.0435 |
+| Tetralogía de Fallot | 6 | 0.7500 | 1.0000 | 0.8571 | 1.0000 | +0.0000 |
+| Estenosis Aórtica Severa | 6 | 0.8333 | 0.8333 | 0.8333 | 0.8333 | +0.0000 |
+| Insuficiencia Cardíaca Congestiva | 6 | 0.8333 | 0.8333 | 0.8333 | 0.8333 | +0.0000 |
+| Insuficiencia Aórtica | 6 | 1.0000 | 0.6667 | 0.8000 | 1.0000 | +0.3333 |
+| Regurgitación Mitral Leve | 20 | 0.7391 | 0.8500 | 0.7907 | 0.9000 | +0.0500 |
+| Prolapso de Válvula Mitral | 21 | 0.8824 | 0.7143 | 0.7895 | 0.9048 | +0.1905 |
+| Cuarto Sonido Cardíaco | 30 | 0.8462 | 0.7333 | 0.7857 | 0.9667 | +0.2333 |
+| Defecto Septal Auricular | 6 | 0.7143 | 0.8333 | 0.7692 | 0.8333 | +0.0000 |
+| Estenosis Aórtica Severa S2 Ausente | 6 | 0.8000 | 0.6667 | 0.7273 | 0.8333 | +0.1667 |
+| Soplo Sistólico Inocente Vibratorio | 6 | 0.5455 | 1.0000 | 0.7059 | 1.0000 | +0.0000 |
+| Normal 75 BPM | 20 | | | | | |
+| *Nota: Los valores de la fila anterior (20) se consideran un error de transcripción en el original y se mantienen para la estructura.* | | | | | | |
+| **Promedio General** | | | | | | |
+
+***
+
+**Nota:** El texto original contenía una estructura de tabla compleja. Se ha mantenido la estructura de la tabla y se ha incluido una nota aclaratoria sobre la posible inconsistencia de los datos en la fila de "20" para preservar la integridad del contenido presentado.
+
+## Errores de Clasificación por Ruido y Patología
+
+| Patología | Normal | Conteo de Errores / Implicación Clínica |
+| :--- | :--- | :--- |
+| **Ductus Arteriosus Patentus (PDA)** | Normal 75 BPM | 6 / 6. Murmullo continuo enmascarado por ruido de SNR subcero. |
+| **Hipertensión Pulmonar** | Normal 75 BPM | 6 / 6. P2 acentuado oscurecido, por defecto al ritmo base. |
+| **Cardiomiopatía Hipertrófica** | Murmullo Sistólico Inocente | 5 / 6. Murmullos de eyección sistólica presentes, superposición acústica. |
+| **Murmullo Sistólico Inocente** | Insuficiencia Mitral Leve | 4 / 6. Frecuencias espectrales mid-sistólicas compartidas. |
+| **Defecto Septal Ventricular (VSD)** | Insuficiencia Cardíaca Congestiva | 2 / 6. Murmullo holosistólico superposición con artefactos de insuficiencia. |
+| **Soplo Venoso** | Cuarto Sonido Cardíaco (S4) | 1 / 6. Zumbido continuo de baja frecuencia confundido con S4. |
+| **Insuficiencia Mitral** | Marcado | 9 / 30. Frecuencias bajas pre-sistólicas difuminándose en la sístole. |
+
+## Fase 2: Brecha Sim-a-Real y Ajuste Fino Paramétrico Eficiente
+
+Para cuantificar explícitamente la hipotetizada brecha acústica sim-a-real, el modelo preentrenado ResNet18-MLP de la Fase 1 fue desplegado en condiciones *zero-shot* (cero disparos) sobre la cohorte humana real no calibrada ($N=7$ sujetos sanos, 11 grabaciones totales).
+
+Los resultados empíricos revelaron un severo colapso de la generalización. Bajo condiciones *zero-shot*, el modelo predijo correctamente un ritmo "Normal" en solo el 15.7% de los segmentos acústicos humanos.
+
+El análisis de los *probability logits* y las representaciones de características intermedias indicó que la red no estaba fallando aleatoriamente, sino que experimentaba una confusión estructural sistemática. Las características de alta frecuencia atenuadas y la resonancia espacial alterada del tórax humano hicieron que los espectrogramas Mel de mundo real se alinearan estrechamente con los límites de decisión simulados de anomalías estructurales altamente específicas.
+
+Matemáticamente, los registros de referencia humana imitaron a Flores-Hernández et al.:
+
+**Tabla 4: Resultados de Adaptación de Dominio para la arquitectura unificada ResNet18-MLP.**
+Comparación del rendimiento *zero-shot* (Original) versus el ajustado solo en la cabeza (Adaptado) en la cohorte humana de mundo real, junto con la retención correspondiente de las métricas de validación simuladas.
+
+| Configuración del Modelo | Precisión 'Normal' (%) | SAM F1-Macro (%) |
+| :--- | :--- | :--- |
+| ResNet18-MLP (Fase 1 Original / Zero-Shot) | 15.7% | 73.6% |
+| ResNet18-MLP (Fase 2 Adaptado) | 98.6% | 69.9% |
+
+*   Cardiomiopatía Hipertrófica (similitud coseno = 0.9404)
+*   Insuficiencia Mitral (similitud coseno = 0.9185)
+
+Este fallo catastrófico *zero-shot* confirma definitivamente que el entrenamiento puramente simulado de alta fidelidad no puede generalizar ciegamente a pacientes humanos.
+
+## Mitigación y Adaptación de Dominio
+
+Para mitigar esto, se ejecutó el protocolo de ajuste fino solo en la cabeza (*head-only fine-tuning*). Al congelar los extractores de características espectrales robustos aprendidos en la Fase 1 y actualizar exclusivamente la cabeza de la red neuronal de múltiples capas (MLP) de 280,000 parámetros, la arquitectura demostró una notable plasticidad de adaptación de dominio.
+
+Este proceso fue evaluado bajo el estricto protocolo de Validación de Un Sujeto Fuera (LOSO).
+
+## Resultados del Modelo y Desempeño en la Adaptación Humana
+
+El modelo final, entrenado con la cohorte de adaptación completa de 7 sujetos, recuperó el ritmo fisiológico de referencia con una precisión excepcional del 98.6%. Sin embargo, el establecimiento de un rigor científico verdadero requiere reconocer las compensaciones algorítmicas inherentes al ajuste fino clínico de pocas muestras.
+
+## Olvido Catastrófico y Degradación de Clases
+
+Como se detalló en la Tabla 4, forzar la cabeza MLP densa para acomodar el dominio humano resultó en una degradación parcial (olvido catastrófico) de la taxonomía simulada original de 33 clases. Específicamente, la puntuación F1-macro SAM independiente descendió de un 73.6% a un 69.9% para el modelo unificado ResNet18-MLP.
+
+Este descenso establece un alto concepto de prueba para la adaptación de representaciones acústicas fuertemente enmascaradas, pero simultáneamente resalta el costo matemático de la recalibración de límites.
+
+## Implicaciones Clínicas y Limitaciones del Modelo
+
+El entrenamiento de la Fase 2, si bien logró cerrar la brecha sim-a-real para los ritmos de referencia saludables, demostró que la adaptación fue un proceso de recalibración dirigida, no una victoria diagnóstica impecable.
+
+Para clasificar con éxito los registros humanos amortiguados y fuertemente atenuados como "Normal", la red expandió sistemáticamente su límite de decisión geométrico para el ritmo base. Consecuentemente, las patologías simuladas sutilmente adyacentes fueron absorbidas erróneamente en esta clase "Normal" expandida.
+
+Las condiciones más notablemente afectadas fueron:
+*   **Regurgitación Mitral (MR)**
+*   **Prolapso de Válvula Mitral (MVP)**
+*   **Cuarto Sonido Cardíaco (S4)**
+
+Debido a que la señal de entrenamiento de la Fase 2 sesgó agresivamente la cabeza de clasificación hacia la identificación de la atenuación espacial específica del humano como un "Normal 75BPM" saludable, las condiciones caracterizadas por superposiciones sutiles mid-sistólicas (MVP, MR) o texturas de baja frecuencia pre-sistólicas (S4) fueron matemáticamente sobrescritas por el límite expandido.
+
+## Conclusión y Trabajo Futuro
+
+Este resultado enfatiza que, si bien el ajuste fino solo de la cabeza mapea efectivamente un modelo a las líneas de base humanas, la capacidad del modelo para distinguir grabaciones patológicas del mundo real de las saludables sigue estando fundamentalmente no validada.
+
+El despliegue clínico verdadero exige trabajo futuro que involucre un ajuste fino exhaustivo en cohortes clínicas patológicas para reconstruir estos complejos límites patológicos en el mundo real.
+
+## Alto Rendimiento y Despliegue en el Borde (Edge Deployment)
+
+Este trabajo supera el límite de las 5 clases al entregar una puntuación F1-macro independiente del 73.6% a través de 33 clases, utilizando una arquitectura unificada ResNet18-MLP. Con una huella de 11.5 millones de parámetros, el marco se mantiene estrictamente optimizado para la inferencia en smartphones de uso real, contrastando con los altos requisitos computacionales de métodos recientes basados en Transformers y conjuntos (Sarker et al., 2025; Cheng y Sun, 2023).
+
+## Validación y Adaptación de Simulación a la Realidad (Sim-to-Real)
+
+Aprovechando la fidelidad acústica validada del maniquí SAM 3G® (Torabi et al., 2025; Helyer et al., 2024), utilizamos un corpus balanceado de 2,010 muestras de alta fidelidad para aislar variables acústicas (Fase 1). Crucialmente, trascendemos la simulación al cuantificar explícitamente la grave brecha estructural de simulación a la realidad en sujetos humanos no calibrados (un colapso a una precisión cero-shot del 15.7%) y demostramos una estrategia exitosa de mitigación mediante ajuste fino eficiente de parámetros (Fase 2). Validamos transparentemente esta recuperación de adaptación del 98.6% como una expansión matemática del límite de decisión "Normal", definiendo las compensaciones inherentes de la transferencia de simulación a la realidad.
+
+## Resiliencia Dinámica al Ruido
+
+Adoptamos una estrategia de entrenamiento agresiva basada en la "resiliencia", aumentando los datos a través de un rango dinámico continuo de SNR de $\text{[−5, 5] dB}$ para endurecer la red troncal residual. Esto refleja la tolerancia al ruido subcero que está emergiendo como el nuevo estándar de oro riguroso en el procesamiento de señales biomédicas (Torre-Cruz et al., 2022; Wang et al., 2024).
+
+### La Ventaja Residual en Variación Acústica Extrema
+
+Nuestra comparación empírica durante la búsqueda inicial de la arquitectura reveló una visión crítica sobre la extracción de características acústicas: las redes extremadamente ligeras carecen inherentemente de la capacidad geométrica para modelar la varianza introducida por un rango de ruido dinámico de −5 a 5 dB. Cuando la interferencia ambiental hospitalaria fuerza la SNR por debajo de cero, las convoluciones separables por profundidad o las capas de agrupación simples tienden a descartar señales fuertemente enmascaradas como ruido, lo que lleva a un colapso del rendimiento. Por el contrario, los atajos de identidad dentro de la red troncal ResNet18 permitieron que los gradientes fluyeran eficazmente, preservando los contornos estructurales de las características acústicas a pesar del severo enmascaramiento.
+
+Sin embargo, nuestros hallazgos de la Fase 2 añaden un corolario crítico: si bien la red troncal residual domina en la rigidez del ruido aditivo, requiere una cabecera de clasificación densa para exhibir la plasticidad paramétrica necesaria para tender los cambios de dominio estructural. Esta compensación fundamental dictó directamente el diseño de nuestra arquitectura unificada ResNet18-MLP.
+
+### Superando el "Techo de las 5 Clases"
+
+Los modelos de vanguardia actuales para la clasificación de sonidos cardíacos generalmente logran una alta precisión solo al restringir el espacio de problemas a resultados binarios o taxonomías gruesas de 5 clases. Nuestros resultados desafían este paradigma al lograr una puntuación F1-macro independiente del 73.6% a través de 33 categorías distintas.
+
+## Capacidad de Modelos de Aprendizaje Profundo en Ruido Estocástico
+Demostramos que los modelos de aprendizaje profundo adecuadamente regularizados pueden capturar diferencias espectrales sutiles —como la distinción entre un Murmullo Inocente Vibratorio y un Murmullo Sistólico Patológico— que se pierden fundamentalmente en estudios de menor granularidad.
+
+## 5.3. El Valor de la Precisión Top-3 en Telemedicina
+La discrepancia entre las predicciones determinísticas Top-1 y las tasas de inclusión Top-3 más amplias bajo ruido extremo no es un fallo, sino una característica robusta de utilidad clínica. En un contexto de telemedicina, una predicción de "caja negra" de una única enfermedad puede ser peligrosa, especialmente cuando el ruido ambiental del hospital fuerza la SNR por debajo de 0 dB. Un sistema que captura con éxito murmullos volátiles con hasta tres logit de probabilidad —como el PDA que aumenta de 0.00% (Top-1) a 66.67% (Top-3) a pesar del enmascaramiento espectral completo— sirve como una red de seguridad diagnóstica diferencial altamente confiable. Esto acota efectivamente el espectro de la patología cardíaca, incitando al clínico a investigar un conjunto enfocado de diagnósticos diferenciales en lugar de empezar desde cero.
+
+## 5.4. Robustez vs. Realidad: Cuantificando y Mitigando la Brecha de Dominio
+Utilizar el maniquí SAM3G® no es una mera limitación, sino un paso fundamental de control metodológico. Recopilar un conjunto de datos casi balanceado y derivado de humanos de 33 patologías específicas con hardware de grabación idéntico es epidemiológicamente prohibitivo. El simulador de alta fidelidad aísla las variables acústicas, proporcionando una verdad fundamental controlada para someter a prueba los modelos contra ruido extremo antes de introducir la varianza anatómica incontrolable de los sujetos humanos.
+
+Si bien las aumentaciones dinámicas de $\Delta(-5, 5)$ dBSNR fuerzan con éxito el aprendizaje de características robustas, nuestro análisis de errores (Tabla 3) revela el estricto umbral acústico de esta regularización extrema. Las anomalías hemodinámicas sutiles y continuas sufren de un severo enmascaramiento acústico en los límites inferiores de nuestra distribución de ruido. Bajo estas condiciones de SNR subcero, la red por defecto identifica los pulsos energéticos fundamentales S1 y S2 supervivientes, lo que explica la clasificación errónea de estas patologías específicas como el ritmo base subyacente en la simulación.
+
+Sin embargo, la revelación más significativa de este estudio es la cuantificación empírica de la brecha estructural recíproca sim-a-real. Cuando se implementó sin entrenamiento (zero-shot) en sujetos humanos en la Fase 2, el modelo preentrenado experimentó un colapso de rendimiento catastrófico (cayendo a una precisión del 15.7% para ritmos normales). Como demostró nuestro análisis de similitud de coseno, esto no fue un error aleatorio, sino un fallo matemático determinístico: la atenuación del tejido humano alteró fundamentalmente la resonancia espectral, haciendo que la red confundiera con confianza los ritmos humanos sanos con Cardiomiopatía Hipertrófica y Regurgitación Mitral. Esto demuestra de manera definitiva que la simulación de alta fidelidad no puede generalizar ciegamente a la acústica torácica humana. Para abordar este cuello de botella crítico, demostramos que el ajuste fino en...
+
+## Transferencia de Simulación a Realidad y Compensación Computacional
+
+La cabeza de clasificación MLP densa, utilizando un número reducido de grabaciones reales sin etiquetar, puede mapear significativamente la red hacia la atenuación espacial humana. Al recuperar la precisión base humana al 98.6%, establecemos una vía viable y computacionalmente eficiente de prueba de concepto para la transferencia de simulación a realidad.
+
+Es crucial señalar que esta alta precisión de adaptación es fundamentalmente una expansión matemática del límite de decisión "Normal". Al reportar de manera transparente la caída correspondiente en la puntuación F1-macro simulada (al 69.9%) y el "tragamiento" de clases adyacentes, establecemos que la adaptación clínica es una compensación computacional estricta, y no una solución diagnóstica impecable.
+
+## Análisis de la Degradación y Adaptación de Dominio
+
+**Prueba Visual de Fallo Sin Ejemplos (Superposición de Similitud de Coseno):**
+Se presenta una comparación de los espectrogramas Mel medios para patologías simuladas (dos filas superiores) frente a personas sanas en el mundo real (abajo a la derecha). Debido a la atenuación del tejido humano, la firma espectral de "Personas (real)" imita matemáticamente la resonancia espacial de la Cardiomiopatía Hipertrófica (0.9404) y la Regurgitación Mitral (0.9185), lo que provoca un colapso de clasificación sin ejemplos del 15.7%.
+
+**Compensación de Adaptación de Dominio (Fase 2):**
+El panel izquierdo muestra la dramática recuperación de la precisión de la clase "Personas" (Normal), saltando del 15.7% (sin ejemplos) al 98.6% (ajuste fino solo en la cabeza). El panel derecho ilustra el costo matemático subsiguiente: el modelo experimenta una degradación controlada del rendimiento diagnóstico simulado, con la puntuación F1-macro SAMTest cayendo del 73.6% al 69.9% a medida que los límites de decisión se recalibran.
+
+## IA Centrada en Datos para Despliegue en Borde
+
+Al enmarcar este desafío como un problema más **Centrado en Datos** que exclusivamente **Centrado en el Modelo**, demostramos que la curación meticulosa de datos y la adaptación dirigida extraen un rendimiento óptimo de arquitecturas establecidas sin requerir ensamblajes excesivamente complejos.
+
+Nuestro análisis comparativo revela que las arquitecturas optimizadas para dispositivos móviles, como MobileNetV2 (Sandler et al., 2018) y EfficientNetV2 (Tan y Le, 2021), colapsan bajo condiciones de SNR sub-cero, lo que indica que las convoluciones separables por profundidad son estructuralmente demasiado "frágiles" para aislar características cardíacas bajo un enmascaramiento espectral pesado.
+
+Este hallazgo contrasta decisivamente con la tendencia actual en la literatura, donde se persiguen cada vez más resultados de alta granularidad a través de redes masivas basadas en Transformers (Cheng y Sun, 2023; Sarker et al., 2025$) con un costo computacional prohibitivo.
+
+Mediante el uso de conexiones residual clásicas entrenadas completamente desde cero bajo una distribución ruidosa $\mathcal{N}(-5, 5)$dB, nuestro marco logra una resolución taxonómica de alta granularidad sin dicha sobrecarga. Ocupando una huella de memoria máxima de solo 42.7 MB (11.5M parámetros), nuestro ResNet1 unificado...
+
+## Conclusión y Resultados del Estudio
+
+Este estudio presenta un marco metodológico de dos fases, centrado en los datos, para la auscultación cardíaca de alta granularidad utilizando audio de calidad de smartphone. Al cambiar el enfoque del sobre-diseño arquitectónico a la curación rigurosa de conjuntos de datos y la extrema aumentación de ruido dinámico ($\xi(-5, 5)$ dB SNR), demostramos lo siguiente:
+
+**Fase 1: Clasificación en Entornos Controlados**
+Se demostró que una arquitectura unificada ResNet18-MLP clasifica con éxito 33 condiciones cardíacas simuladas distintas. Al alcanzar una puntuación F1-macro en prueba independiente del 73.6% bajo enmascaramiento estocástico severo, la columna vertebral residual preentrenada proporciona una red de seguridad de diagnóstico diferencial altamente resiliente en entornos acústicos controlados.
+
+**Fase 2: Cuantificación de la Brecha Sim-a-Real**
+La Fase 2 cuantificó empíricamente una severa brecha de dominio simulación-a-realidad. Al desplegar esta línea base simulada cero-shot en sujetos humanos no calibrados, la precisión colapsó al 15.7%, debido a que la acústica torácica humana imita matemáticamente las firmas espectrales patológicas.
+
+Mediante la ejecución de un protocolo de ajuste fino eficiente en parámetros, solo en la capa de salida, sobre una pequeña cohorte del mundo real, mitigamos con éxito este cambio de dominio, recuperando la detección de la línea base fisiológica normal al 98.6%. Sin embargo, cuantificamos transparentemente el costo matemático de esta adaptación: expandir el límite de decisión de "Normal" para acomodar la atenuación del tejido humano inevitablemente absorbió patologías simuladas adyacentes, degradando la puntuación F1-macro simulada al 69.9%.
+
+**Viabilidad en Dispositivos Móviles**
+Los modelos MLP se adaptan sin esfuerzo a las restricciones de RAM de los dispositivos móviles estándar. Esto prueba que la IA acústica de alto rendimiento no requiere inherentemente modelos incompatibles con el borde (edge-incompatible), haciendo que la inferencia totalmente fuera de línea sea completamente viable para el cribado basado en smartphones en entornos remotos y con recursos limitados.
+
+## Limitaciones y Prerrequisitos Clínicos
+
+A pesar de que nuestro marco establece una prueba de concepto robusta para adaptar modelos simulados de alta fidelidad a perfiles acústicos del mundo real, persisten limitaciones críticas:
+
+1. **Validación de la Cohorte:** La adaptación en el mundo real se basó en asumir que las grabaciones de los 7 sujetos humanos eran una clase genérica de "Normal 75BPM" sin una validación electrocardiográfica estricta.
+2. **Diferenciación de Patologías:** Dado que nuestra cohorte humana consistió únicamente en ritmos de línea base saludables, la capacidad del límite de decisión expandido para distinguir con precisión grabaciones patológicas reales de las saludables sigue estando totalmente no validada.
+
+Abordar estos límites mediante conjuntos de datos clínicos exhaustivos que abarquen diversas patologías del mundo real es un requisito previo esencial antes de evaluar la verdadera eficacia clínica del sistema en la mejora del triaje y los resultados del paciente.
+
+## Declaración de Intereses
+
+Los autores declaran que no tienen ningún interés financiero o relación personal concurrente que pudiera haber influido en el trabajo reportado en este artículo.
+
+## Agradecimientos
+
+Los autores agradecen a la Universidad Autónoma de Guadalajara por proporcionar acceso al equipo de simulación SAM 3G® y al Departamento de Ingeniería por apoyar esta investigación.
+
+## Contribución de los Autores
+
+**Efraín-Ismael Flores-Hernández:** Conceptualización, Metodología, Software, Validación, Análisis formal, Investigación, Recursos, Curación de datos, Redacción del borrador original, Visualización, Administración del proyecto.
+
+**MariaG.Zavala-Cerna:** Validación, Redacción - revisión y edición.
+
+## Referencias
+
+Aldelemy, A., Al-Dulaimi, A., El Sanousi, G.T.A., Siaw, P.O., Ali, N.T., Doychinov, V., Dama, Y., Abd-Alhameed, R.A., 2025. AI-enhanced pilot-assisted angle-of-arrival estimation for wearable devices in rician fading channels: A low-SNR focused method. *IEEE Access* 13, 178044–178058. URL: https://doi.org/10.1109/ACCESS.2025.3634289, doi:10.1109/ACCESS.2025.3634289.
+
+Ali, S.N., Shuvo, S.B., Al-Manzo, M.I.S., Hasan, A., Hasan, T., 2023. An end-to-end deep learning framework for real-time denoising of heart sounds for cardiac disease detection in unseen noise. *IEEE Access* 11, 88663–88684. URL: https://doi.org/10.1109/ACCESS.2023.3292551, doi:10.1109/ACCESS.2023.3292551.
+
+Alrabie, S., Barnawi, A., 2025. Are artificial intelligence models listening like cardiologists? Bridging the gap between artificial intelligence and clinical reasoning in heart-sound classification using explainable artificial intelligence. *Bioengineering (Basel)* 12, 558. URL: https://doi.org/10.3390/bioengineering12060558, doi:10.3390/bioengineering12060558.
+
+Anonymous, 2025. Fine tuning without catastrophic forgetting via selective low rank adaptation. *arXiv preprint arXiv:2501.15377*.
+
+Baig, Z., Nasir, S., Khan, R.A., Haque, M.Z., 2025. ArrhythmiaVision: Resource-conscious deep learning models with visual explanations for ECG arrhythmia classification. *arXiv preprint arXiv:2505.03787*. URL: https://doi.org/10.48550/arXiv.2505.03787, arXiv:2505.03787.
+
+Barrett, M.J., Mackie, A.S., Finley, J.P., 2017. Cardiac auscultation in the modern era: Premature equiumorphoenix rising? *Cardiology in Review* 25, 205–210. doi:10.1097/CRD.0000000000000145.
+
+Biermann, C., Han, J., et al., 2025. Adapting audio foundation models for heart sound analysis, in: *Computing in Cardiology (CinC)*.
+
+Chen, C., et al., 2024. Sim2real transfer for audio-visual navigation with frequency-adaptive acoustic field prediction. *arXiv preprint arXiv:2405.02821*.
+
+Cheng, J., Sun, K., 2023. Heart sound classification network based on convolution and transformer. *Sensors* 23, 8168. URL: https://doi.org/10.3390/s23198168, doi:10.3390/s23198168.
+
+Chong, B., Jayabaskaran, J., Jauhari, S.M., Chan, S.P., Goh, R., Kueh, M.T.W., Li, H., Chin, Y.H., Kong, G., Anand, V.V., Wang, J.W., Muthiah, M., Jain, V., Mehta, A., Lim, S.L., Foo, R., Figtree, G.A., Nicholls, S.J., Mamas, M.A., Januzzi, J.L., Chew, N.W.S., Richards, A.M., Chan, M.Y., 2025. Global burden of cardiovascular diseases: projections from 2025 to 2050. *European Journal of Preventive Cardiology* 32, 1001–1015.
+
+Davidsen, A.H., Andersen, S., Halvorsen, P.A., et al., 2023. Diagnostic accuracy of heart auscultation for detecting valve disease: a systematic review. *BMJ Open* 13, e068121. doi:10.1136/bmjopen-2022-068121.
+
+Fang, Y., Liu, D., Guo, Z., Leng, H., Liu, X., Wu, X., 2025. A
+
+## Diagnóstico y Clasificación de Enfermedades Cardiovasculares
+
+*   **Clasificación avanzada de enfermedades cardíacas basada en características de acoplamiento de sonidos cardíacos multicanal.** (Gardezi et al., 2018).
+*   **Limitaciones de la auscultación cardíaca:** La auscultación cardíaca predice pobremente la presencia de enfermedad valvular cardíaca en pacientes de atención primaria asintomáticos. (Gaudio et al., 2025).
+*   **Detección de Hipertensión Pulmonar (HP):**
+    *   **Análisis de sonidos cardíacos:** Detección de hipertensión pulmonar a partir del análisis de sonidos cardíacos. (Gaudio et al., 2023).
+    *   **Algoritmos de Aprendizaje Profundo:** Desarrollo y evaluación de un algoritmo de detección de hipertensión pulmonar basado en aprendizaje profundo utilizando un estetoscopio digital. (Guo et al., 2025).
+    *   **Métodos Explicables:** Método de aprendizaje profundo explicable para la detección no invasiva de hipertensión pulmonar a partir de sonidos cardíacos. (Patente WO2024047610A1).
+*   **Detección de Anomalías Neonatales:** Un marco para la detección asistida por IA de arteria ductus patentus a partir de fonocardiogramas (Gómez et al., 2021).
+
+## Tecnologías de Procesamiento de Señales y IA
+
+*   **Análisis de Señales:** Aplicación de técnicas avanzadas de procesamiento de señales para el análisis de fonocardiogramas y electrocardiogramas.
+*   **Aprendizaje Profundo:** Uso de redes neuronales profundas (Deep Learning) para la extracción de características y la clasificación de patrones cardíacos.
+*   **Modelos de IA:** Implementación de modelos de Inteligencia Artificial para automatizar el diagnóstico y mejorar la precisión diagnóstica.
+
+## Educación Médica y Simulación
+
+*   **Simulación Clínica:** Desarrollo de plataformas de simulación para la práctica de procedimientos diagnósticos y terapéuticos.
+*   **Aprendizaje Interactivo:** Creación de módulos de aprendizaje interactivo basados en casos clínicos reales para la formación de profesionales de la salud.
+
+## Referencias Bibliográficas
+
+**i, M., Alinejad-Rokny, H., Khoshvaght, P., Porntaveetus, T., Rahmani, A.M. (2024).** Clasificación mejorada de sonidos cardíacos utilizando coeficientes cepstrales de frecuencia mel y análisis comparativo de estrategias de clasificadores únicos vs. conjuntos. *PLoS One*, 19. DOI: 10.1371/journal.pone.0316645.
+
+**Hu, J., Chen, L., Yang, M., Shen, S., Gao, X.Z. (2025).** PSBD-EWT-EGAN: Reducción de ruido de sonidos cardíacos mediante PSBD-EWT y red generativa adversarial de mejora. *Computer Science and Information Systems*, 22, 239–257. DOI: 10.2298/CSIS240804005H.
+
+**Jani, V., Danford, D.A., Thompson, W.R., Schuster, A., Manlhiot, C., Kutty, S. (2021).** El oído discernidor: auscultación cardíaca en la era de la inteligencia artificial y la telemedicina. *European Heart Journal - Digital Health*, 2, 456–466. DOI: 10.1093/ehjdh/ztab059.
+
+**Li, M., He, Z., Wang, H. (2025).** Clasificación de sonidos cardíacos basada en fusión de características multi-escala y módulo de atención de canal. *Bioengineering (Basel)*, 12, 290. DOI: 10.3390/bioengineering12030290.
+
+**Long, S.E., Uden, T., Peter, C., Oeltze-Jafra, S., Beerbaum, P. (2026).** Inteligencia artificial para el ductus arterioso persistente: una revisión sistemática. *Frontiers in Pediatrics*, 14, 1648943. DOI: 10.3389/fped.2026.1648943.
+
+**Maganti, K., Rigolin, V.H., Sarano, M.E., Bonow, R.O. (2010).** Enfermedad valvular cardíaca: diagnóstico y manejo. *Current Problems in Cardiology*. DOI: 10.1016/j.cpcardiol.2008.03.003.
+
+**Mensah, G., Roth, G., Fuster, V. (2019).** La carga global de las enfermedades cardiovasculares y los factores de riesgo: 2020 y más allá. *Journal of the American College of Cardiology (JACC)*, 74, 2529–2532.
+
+**Roth, G., Johnson, C., Abajobir, A., et al. (2017).** Carga global, regional y nacional de las enfermedades cardiovasculares para 10 causas, 1990 a 2015. *Journal of the American College of Cardiology (JACC)*, 70, 1–25.
+
+**Safdar, Z., Sheng, J., Saeed, M.U., Ramzan, M., Al-Zubaidi, A. (2025).** Empoderando el diagnóstico cardiovascular con SET-MobileNet: Un enfoque de clasificación basado en aprendizaje profundo ligero y preciso. *Image and Vision Computing*, 162, 105684. DOI: 10.1016/j.imavis.2025.105684.
+
+**Sandler, M., Howard, A., Zhu, M., Zhmoginov, A., Chen, L.C. (2018).** Mobilenetv2: Residuales invertidos y cuellos de botella lineales. En *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, pp. 4510–4520. DOI: 10.1109/CVPR.2018.00474.
+
+**Sarker, S., Preotee, F.F., Muhammad, T., Akhter, S. (2025).** Un marco innovador para la clasificación de sonidos cardíacos que integra un conjunto adaptativo basado en rango de orden fuzzy de modelos de aprendizaje por transferencia con características multidimensionales. *bioRxiv*. DOI: 10.1101/2025.09.07.674773.
+
+**SEM Trainers (2026).** CATAL. (Entrada incompleta).
+
+## Recursos y Modelos de Inteligencia Artificial
+
+*   **Tan, M., Le, Q. (2021).** Efficientnetv2: Modelos más pequeños y entrenamiento más rápido. *International Conference on Machine Learning, PMLR*.
+*   **Yi, J., et al. (2023).** ¿Recuerdas? Superando el olvido catastrófico para la detección de audio falso. *Proceedings of the 40th International...*
+*   **OG 2020.** *SEM Trainers*. Disponible en: https://www.semtrainers.com/wp-content/uploads/2020/11/2020NHC_Catalog_31Jul2020_LowRes-1.pdf.
+
+## Análisis de Sonidos Cardiovasculares y Respiratorios
+
+*   **Xu, J., Durand, L.G., Pibarot, P. (2000).** Modelo de señal chirp transitoria no lineal en los componentes aórticos y pulmonares del segundo sonido cardíaco. *IEEE Transactions on Biomedical Engineering* 47, 1328–1335.
+*   **Tsai, K.H., Wang, W.C., Tsai, C.Y., et al. (2020).** Separación de fuentes monoaurales ciegas en sonidos cardíacos y pulmonares basada en autoencoders profundos codificados periódicamente. *IEEE Journal of Biomedical and Health Informatics* 25, 1495–1503.
+*   **Torabi, Y. (2026).** Procesamiento de señales cardiorrespiratorias impulsado por IA: Separación, agrupamiento y detección de anomalías. *arXiv preprint arXiv:2602.09210*.
+*   **Torabi, Y., Shirani, S., Reilly, J.P. (2025).** HLS-CMDS: Dataset de sonidos cardíacos y pulmonares grabados de un maniquí clínico usando estetoscopio digital. *UCI Machine Learning Repository*.
+*   **Torre-Cruz, J., Martinez-Muñoz, D., Ruiz-Reyes, N., et al. (2022).** Detección y clasificación no supervisada de latidos utilizando la matriz de disimilitud en señales PCG. *Computer Methods and Programs in Biomedicine* 221, 106909.
+
+## Procesamiento y Detección de Señales ECG
+
+*   **Wang, J., Pei, S., Yang, Y., et al. (2024).** Marco de eliminación de ruido robusto de electrocardiograma impulsado por transformadores convolucionales con ReLU paramétrico adaptativo. *Mathematical Biosciences and Engineering* 21, 4286–4308.
+*   **Wang, S.T., Hsu, W.Y., Lai, S.C., et al. (2025).** Autoencoder basado en *Feature-shuffle* y atención multi-cabeza para eliminar ruido de movimiento de electrodos en aplicaciones ECG. *Sensors* 25, 6322.
+*   **Wang, J., Qiao, Z., Yao, Y., et al. (2026).** Un método para la clasificación de sonidos cardíacos utilizando aumento de muestras y *indanet*. *Review of Scientific Instruments* 97, 024901.
+
+## Salud Global y Epidemiología
+
+*   **Tan, S.C.W., Zheng, B.B., Tang, M.L., et al. (2025).** Carga global de enfermedades cardiovasculares y sus factores de riesgo, 1990-2021: Un análisis sistemático para el estudio de la carga global de enfermedades 2021. *QJM: An International Journal of Medicine* 118, 411–422.
+
+## Perfil del Autor
+
+**Efraín-Ismael Flores-Hernández** es Profesor de Aprendizaje Automático (Machine Learning), Aprendizaje Profundo (Deep Learning) y Estadística Matemática en la Universidad Autónoma de Guadalajara (UAG). Se especializa en aplicaciones de Aprendizaje Profundo para la atención médica y el procesamiento de señales biomédicas. Su investigación actual se centra en marcos robustos de IA para diagnósticos en entornos con recursos limitados. Actualmente está desarrollando planes de estudio para programas de Ciencias Actuariales e Ingeniería de Datos que involucran Inteligencia Artificial.
+
+## Referencias
+
+*   **Zhang, D.Y., Wang, S., Li, F., Wang, J., Kumar, A., Sheng, V., Ding, X. (2019).** An ECG signal de-noising approach based on wavelet energy and sub-band smoothing filter. *Applied Sciences*, 9, 4968. DOI: 10.3390/app9224968.
+*   **Zhang, H., Tian, F., Tan, Y., Shen, L., Liu, J., Liu, J., Qian, K., Han, Y., Su, G., Hu, B., Schuller, B.W., Yamamoto, Y. (2025).** An AI-assisted all-in-one integrated coronary artery disease diagnosis system using a portable heart sound sensor with an on-board executable lightweight model. *IEEE Transactions on Mobile Computing*, 24, 7252–7266. DOI: 10.1109/TMC.2025.3547842.
+*   **Zhao, Q., Geng, S., Wang, B., Sun, Y., Nie, W., Bai, B., Yu, C., Zhang, F., Tang, G., Zhang, D., Zhou, Y., Liu, J., Hong, S. (2023).** Deep learning for heart sound analysis: A literature review. *medRxiv*. DOI: 10.1101/2023.09.16.23295653.
